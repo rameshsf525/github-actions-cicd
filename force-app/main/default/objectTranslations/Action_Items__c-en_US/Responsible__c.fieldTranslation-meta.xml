@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomFieldTranslation xmlns="http://soap.sforce.com/2006/04/metadata">
+    <label><!-- Responsible --></label>
+    <name>Responsible__c</name>
+    <picklistValues>
+        <masterLabel>Chrysler</masterLabel>
+        <translation><!-- Chrysler --></translation>
+    </picklistValues>
+    <picklistValues>
+        <masterLabel>DFX</masterLabel>
+        <translation><!-- DFX --></translation>
+    </picklistValues>
+    <picklistValues>
+        <masterLabel>SFDC</masterLabel>
+        <translation><!-- SFDC --></translation>
+    </picklistValues>
+    <picklistValues>
+        <masterLabel>SFDC + Chrysler</masterLabel>
+        <translation><!-- SFDC + Chrysler --></translation>
+    </picklistValues>
+    <picklistValues>
+        <masterLabel>SI</masterLabel>
+        <translation><!-- SI --></translation>
+    </picklistValues>
+</CustomFieldTranslation>

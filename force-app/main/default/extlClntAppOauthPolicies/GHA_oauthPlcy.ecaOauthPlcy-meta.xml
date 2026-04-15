@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ExtlClntAppOauthConfigurablePolicies xmlns="http://soap.sforce.com/2006/04/metadata">
+    <externalClientApplication>GHA</externalClientApplication>
+    <ipRelaxationPolicyType>Enforce</ipRelaxationPolicyType>
+    <isClientCredentialsFlowEnabled>false</isClientCredentialsFlowEnabled>
+    <isTokenExchangeFlowEnabled>false</isTokenExchangeFlowEnabled>
+    <label>GHA_oauthPlcy</label>
+    <permittedUsersPolicyType>AllSelfAuthorized</permittedUsersPolicyType>
+    <refreshTokenPolicyType>SpecificLifetime</refreshTokenPolicyType>
+    <refreshTokenValidityPeriod>365</refreshTokenValidityPeriod>
+    <refreshTokenValidityUnit>Days</refreshTokenValidityUnit>
+    <requiredSessionLevel>STANDARD</requiredSessionLevel>
+</ExtlClntAppOauthConfigurablePolicies>
