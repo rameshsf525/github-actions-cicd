@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ApprovalProcess xmlns="http://soap.sforce.com/2006/04/metadata">
+    <active>true</active>
+    <allowRecall>true</allowRecall>
+    <allowedSubmitters>
+        <type>owner</type>
+    </allowedSubmitters>
+    <approvalPageFields>
+        <field>Name</field>
+        <field>CreatedBy</field>
+    </approvalPageFields>
+    <approvalStep>
+        <allowDelegate>false</allowDelegate>
+        <approvalActions>
+            <action>
+                <name>NAFTA_Update_Status_on_Approval_CDI_Requ</name>
+                <type>FieldUpdate</type>
+            </action>
+            <action>
+                <name>NAFTA_Update_the_approval_date_CDI</name>
+                <type>FieldUpdate</type>
+            </action>
+        </approvalActions>
+        <assignedApprover>
+            <approver>
+                <name>uscustomercaretest22@cac.stellantis.com.uat</name>
+                <type>user</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <label>Approval Request goes to Joaan Heck</label>
+        <name>Approval_Request_goes_to_Joaan_Heck</name>
+    </approvalStep>
+    <description>This is approval process for approval of CDI or friend request. This is a 1 level approval process for some requests based on criteria.</description>
+    <enableMobileDeviceAccess>false</enableMobileDeviceAccess>
+    <entryCriteria>
+        <formula>TEXT(NAFTA_RequestStatus__c) = &apos;Submitted&apos; &amp;&amp; 
+(CreatedBy.FederationIdentifier= &apos;T9995J4&apos; 
+|| CreatedBy.FederationIdentifier= &apos;T6277T0&apos;
+|| CreatedBy.FederationIdentifier= &apos;T7930ER&apos;
+|| CreatedBy.FederationIdentifier= &apos;T2041BK&apos;
+|| CreatedBy.FederationIdentifier= &apos;T8655DP&apos; 
+|| CreatedBy.FederationIdentifier= &apos;T7857KM&apos;
+|| CreatedBy.FederationIdentifier= &apos;T1245RG&apos;
+|| CreatedBy.FederationIdentifier= &apos;T3274J0&apos; 
+|| CreatedBy.FederationIdentifier= &apos;T1779MM&apos; 
+|| CreatedBy.FederationIdentifier= &apos;T0933SS&apos; 
+|| CreatedBy.FederationIdentifier= &apos;T3976RK&apos; 
+|| CreatedBy.FederationIdentifier= &apos;T5631MA&apos; 
+|| CreatedBy.FederationIdentifier= &apos;T0997TK&apos;
+|| CreatedBy.FederationIdentifier= &apos;T5467EW&apos; 
+|| CreatedBy.FederationIdentifier= &apos;T8540MF&apos;
+|| CreatedBy.FederationIdentifier= &apos;T0188T1&apos;
+|| CreatedBy.FederationIdentifier= &apos;T5854CE&apos;
+|| CreatedBy.FederationIdentifier= &apos;T4127NI&apos;
+|| CreatedBy.FederationIdentifier= &apos;T7371RS&apos; 
+|| CreatedBy.FederationIdentifier= &apos;T3085GJ&apos; 
+|| CreatedBy.FederationIdentifier= &apos;T5349RC&apos; 
+|| CreatedBy.FederationIdentifier= &apos;T1416MM&apos; 
+|| CreatedBy.FederationIdentifier= &apos;T0539J0&apos;
+|| CreatedBy.FederationIdentifier= &apos;T4893CO&apos; 
+|| CreatedBy.FederationIdentifier= &apos;T8731CI&apos; 
+|| CreatedBy.FederationIdentifier= &apos;T0130DL&apos;
+|| CreatedBy.FederationIdentifier= &apos;T1286TV&apos; 
+|| CreatedBy.FederationIdentifier= &apos;T4880PH&apos;
+|| CreatedBy.FederationIdentifier= &apos;T1655TN&apos;
+|| CreatedBy.FederationIdentifier= &apos;T1835RC&apos;
+|| CreatedBy.FederationIdentifier= &apos;T5295EJ&apos;
+|| CreatedBy.FederationIdentifier= &apos;T5333GB&apos;
+|| CreatedBy.FederationIdentifier= &apos;T6494MW&apos;
+|| CreatedBy.FederationIdentifier= &apos;T7767TZ&apos;
+|| CreatedBy.FederationIdentifier= &apos;T2209OR&apos;
+|| CreatedBy.FederationIdentifier= &apos;T4503SM&apos;
+|| CreatedBy.FederationIdentifier= &apos;T5139AM&apos;
+|| CreatedBy.FederationIdentifier= &apos;T4012KT&apos;
+|| CreatedBy.FederationIdentifier= &apos;T7368C1&apos;
+|| CreatedBy.FederationIdentifier= &apos;T5471PK&apos;
+|| CreatedBy.FederationIdentifier= &apos;T2065JG&apos;
+|| CreatedBy.FederationIdentifier= &apos;T0555WE&apos;
+|| CreatedBy.FederationIdentifier= &apos;T7048AD&apos;
+|| CreatedBy.FederationIdentifier= &apos;T7804D1&apos;
+|| CreatedBy.FederationIdentifier= &apos;T3718RL&apos;
+|| CreatedBy.FederationIdentifier= &apos;T3569MD&apos;
+|| CreatedBy.FederationIdentifier= &apos;T6684WF&apos;)</formula>
+    </entryCriteria>
+    <finalApprovalRecordLock>false</finalApprovalRecordLock>
+    <finalRejectionActions>
+        <action>
+            <name>NAFTA_UpdateStatus_on_Rejection_CDI</name>
+            <type>FieldUpdate</type>
+        </action>
+    </finalRejectionActions>
+    <finalRejectionRecordLock>false</finalRejectionRecordLock>
+    <label>Single Level Apprvl Of CDI and FR</label>
+    <processOrder>1</processOrder>
+    <recallActions>
+        <action>
+            <name>CC_CDIRequestStatusRecalled</name>
+            <type>FieldUpdate</type>
+        </action>
+    </recallActions>
+    <recordEditability>AdminOrCurrentApprover</recordEditability>
+    <showApprovalHistory>true</showApprovalHistory>
+</ApprovalProcess>

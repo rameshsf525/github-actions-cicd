@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Calc_Installation_Step_Status__c</fullName>
+    <description>&quot;case((Consent_Form==&quot;&quot;Yes&quot;&quot; &amp;
+HW_Status != &quot;&quot;&quot;&quot; &amp;
+HW_Status==&quot;&quot;Install Completed&quot;&quot; &amp;
+Set_Up_Wizard_Completed == &quot;&quot;Complete&quot;&quot; &amp;
+DMS_Auth_Form_Received_ALL != &quot;&quot;&quot;&quot; &amp;
+DMS_Integration_Completed != &quot;&quot;&quot;&quot; &amp;
+(Pricing_Wizard_Completed==&quot;&quot;Complete&quot;&quot; | (Pricing_Wizard_Express_1_Completed!=&quot;&quot;&quot;&quot; &amp; Pricing_Wizard_Express_2_Completed!=&quot;&quot;&quot;&quot;)) &amp;
+int(No_of_OpCodes_Missing) &lt; 200 &amp;
+OSS_Ledger_Call_Complete != &quot;&quot;&quot;&quot; &amp;
+Go_Live_Date != &quot;&quot;&quot;&quot;),&quot;&quot;Complete&quot;&quot;,
+true,&quot;&quot;Incomplete&quot;&quot;)&quot;</description>
+    <externalId>false</externalId>
+    <label>Installation Step Status</label>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>false</trackHistory>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Complete</fullName>
+                <default>false</default>
+                <label>Complete</label>
+            </value>
+            <value>
+                <fullName>Incomplete</fullName>
+                <default>false</default>
+                <label>Incomplete</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

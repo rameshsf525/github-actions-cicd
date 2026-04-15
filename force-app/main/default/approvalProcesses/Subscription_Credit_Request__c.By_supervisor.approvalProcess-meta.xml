@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ApprovalProcess xmlns="http://soap.sforce.com/2006/04/metadata">
+    <active>true</active>
+    <allowRecall>false</allowRecall>
+    <allowedSubmitters>
+        <type>owner</type>
+    </allowedSubmitters>
+    <approvalPageFields>
+        <field>Name</field>
+        <field>Owner</field>
+        <field>Subscription_Months__c</field>
+        <field>Credit_Amount__c</field>
+        <field>Approval_Status__c</field>
+        <field>Case__c</field>
+        <field>CreatedBy</field>
+        <field>GSDP_Credit_Note_Id__c</field>
+        <field>Currency__c</field>
+        <field>Subscription_Credit_Reason__c</field>
+        <field>Other_Reason__c</field>
+        <field>LastModifiedBy</field>
+    </approvalPageFields>
+    <approvalStep>
+        <allowDelegate>false</allowDelegate>
+        <approvalActions>
+            <action>
+                <name>Approval_Status_InPending</name>
+                <type>FieldUpdate</type>
+            </action>
+        </approvalActions>
+        <assignedApprover>
+            <approver>
+                <type>adhoc</type>
+            </approver>
+        </assignedApprover>
+        <entryCriteria>
+            <criteriaItems>
+                <field>Subscription_Credit_Request__c.Months_In_Number__c</field>
+                <operation>greaterThan</operation>
+                <value>6</value>
+            </criteriaItems>
+        </entryCriteria>
+        <ifCriteriaNotMet>ApproveRecord</ifCriteriaNotMet>
+        <label>Approve Credit Request</label>
+        <name>Approve_Credit_Request</name>
+    </approvalStep>
+    <description>The requests which are submitted by L1 Supervisor or L2 Supervisor and with the amount under the submitter will enter into this approval process</description>
+    <enableMobileDeviceAccess>false</enableMobileDeviceAccess>
+    <entryCriteria>
+        <booleanFilter>(1 AND 2) AND (3 OR 4 OR 5 OR 6)</booleanFilter>
+        <criteriaItems>
+            <field>Subscription_Credit_Request__c.Months_In_Number__c</field>
+            <operation>lessOrEqual</operation>
+            <value>6</value>
+        </criteriaItems>
+        <criteriaItems>
+            <field>Subscription_Credit_Request__c.Approval_Status__c</field>
+            <operation>notEqual</operation>
+            <value>Approved,Rejected,In Pending,Processing</value>
+        </criteriaItems>
+        <criteriaItems>
+            <field>Subscription_Credit_Request__c.Onwer_UBR__c</field>
+            <operation>contains</operation>
+            <value>L1 Supervisor</value>
+        </criteriaItems>
+        <criteriaItems>
+            <field>Subscription_Credit_Request__c.Onwer_UBR__c</field>
+            <operation>contains</operation>
+            <value>L2 Supervisor</value>
+        </criteriaItems>
+        <criteriaItems>
+            <field>Subscription_Credit_Request__c.Onwer_UBR__c</field>
+            <operation>equals</operation>
+            <value>CS Fort Myers Vendor Operations Manager</value>
+        </criteriaItems>
+        <criteriaItems>
+            <field>Subscription_Credit_Request__c.Onwer_UBR__c</field>
+            <operation>equals</operation>
+            <value>CS Belize Vendor Operations Manager</value>
+        </criteriaItems>
+    </entryCriteria>
+    <finalApprovalActions>
+        <action>
+            <name>Approval_Status_InPending</name>
+            <type>FieldUpdate</type>
+        </action>
+    </finalApprovalActions>
+    <finalApprovalRecordLock>true</finalApprovalRecordLock>
+    <finalRejectionRecordLock>false</finalRejectionRecordLock>
+    <label>By supervisor</label>
+    <processOrder>2</processOrder>
+    <recordEditability>AdminOnly</recordEditability>
+    <showApprovalHistory>false</showApprovalHistory>
+</ApprovalProcess>

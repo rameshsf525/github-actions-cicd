@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ApprovalProcess xmlns="http://soap.sforce.com/2006/04/metadata">
+    <active>false</active>
+    <allowRecall>false</allowRecall>
+    <allowedSubmitters>
+        <submitter>CC_Specialist_USA</submitter>
+        <type>role</type>
+    </allowedSubmitters>
+    <approvalPageFields>
+        <field>Name</field>
+        <field>NAFTA_PremiumVehicleRental__c</field>
+        <field>NAFTA_AlfaRental__c</field>
+    </approvalPageFields>
+    <approvalStep>
+        <allowDelegate>false</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <type>userHierarchyField</type>
+            </approver>
+        </assignedApprover>
+        <entryCriteria>
+            <formula>OR( AND( CC_TotalRentalDaysProvidedByAgent__c &gt;10, 
+OR( ISPICKVAL(CC_DailyRate__c,&quot;Regular&quot;), 
+ISPICKVAL(CC_DailyRate__c,&quot;Premium&quot;), 
+ISPICKVAL(CC_DailyRate__c,&quot;Competitive vehicle&quot;))), 
+ISPICKVAL(CC_DailyRate__c,&quot;Other (special circumstances)&quot;) )</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>ApproveRecord</ifCriteriaNotMet>
+        <label>Step 1</label>
+        <name>Step_1</name>
+    </approvalStep>
+    <enableMobileDeviceAccess>false</enableMobileDeviceAccess>
+    <entryCriteria>
+        <formula>AND( ISPICKVAL(CC_Status__c,&quot;Submitted&quot;),  CONTAINS (CreatedBy.UserRole.Name, &apos;Specialist&apos;), RecordType.DeveloperName ==&apos;CC_RentalCarByProvider&apos;)</formula>
+    </entryCriteria>
+    <finalApprovalActions>
+        <action>
+            <name>CC_Rental_Car_Request_Status_Approved</name>
+            <type>FieldUpdate</type>
+        </action>
+    </finalApprovalActions>
+    <finalApprovalRecordLock>false</finalApprovalRecordLock>
+    <finalRejectionActions>
+        <action>
+            <name>CC_Rental_Car_Request_Status_Rejected</name>
+            <type>FieldUpdate</type>
+        </action>
+    </finalRejectionActions>
+    <finalRejectionRecordLock>false</finalRejectionRecordLock>
+    <label>Rental Car Request Approval Specialist</label>
+    <nextAutomatedApprover>
+        <useApproverFieldOfRecordOwner>false</useApproverFieldOfRecordOwner>
+        <userHierarchyField>Manager</userHierarchyField>
+    </nextAutomatedApprover>
+    <processOrder>7</processOrder>
+    <recordEditability>AdminOrCurrentApprover</recordEditability>
+    <showApprovalHistory>false</showApprovalHistory>
+</ApprovalProcess>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Calc_GS_Enrolled__c</fullName>
+    <externalId>false</externalId>
+    <label>GS Enrolled Status</label>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>false</trackHistory>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>1 Enrolled</fullName>
+                <default>false</default>
+                <label>1 Enrolled</label>
+            </value>
+            <value>
+                <fullName>2 Opt Out</fullName>
+                <default>false</default>
+                <label>2 Opt Out</label>
+            </value>
+            <value>
+                <fullName>3 No Action</fullName>
+                <default>false</default>
+                <label>3 No Action</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

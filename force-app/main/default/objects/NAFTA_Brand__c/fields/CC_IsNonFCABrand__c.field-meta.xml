@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>CC_IsNonFCABrand__c</fullName>
+    <defaultValue>false</defaultValue>
+    <description>This will be checked if brand listed is for Non FCA vehicle</description>
+    <externalId>false</externalId>
+    <inlineHelpText>This field is used to consider brand as FCA vs NON-FCA.</inlineHelpText>
+    <label>IsNonFCABrand</label>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

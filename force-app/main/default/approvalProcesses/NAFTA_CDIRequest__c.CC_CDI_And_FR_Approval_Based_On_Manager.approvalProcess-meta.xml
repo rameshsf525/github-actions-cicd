@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ApprovalProcess xmlns="http://soap.sforce.com/2006/04/metadata">
+    <active>true</active>
+    <allowRecall>true</allowRecall>
+    <allowedSubmitters>
+        <type>owner</type>
+    </allowedSubmitters>
+    <approvalPageFields>
+        <field>Name</field>
+        <field>CreatedBy</field>
+    </approvalPageFields>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <type>userHierarchyField</type>
+            </approver>
+        </assignedApprover>
+        <label>Immediate Managers Approval</label>
+        <name>Immediate_Managers_Approval</name>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>false</allowDelegate>
+        <approvalActions>
+            <action>
+                <name>NAFTA_Update_Status_on_Approval_CDI_Req2</name>
+                <type>FieldUpdate</type>
+            </action>
+            <action>
+                <name>NAFTA_Update_the_approval_date_CDI_FR_2</name>
+                <type>FieldUpdate</type>
+            </action>
+        </approvalActions>
+        <assignedApprover>
+            <approver>
+                <name>uscustomercaretest22@cac.stellantis.com.uat</name>
+                <type>user</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <label>Directors approval</label>
+        <name>Directors_approval</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <description>If manager of the CDI and FR request creator present in the exception list then after managers approval directly sending request to Joann.</description>
+    <enableMobileDeviceAccess>false</enableMobileDeviceAccess>
+    <entryCriteria>
+        <formula>TEXT(NAFTA_RequestStatus__c) = &apos;Submitted&apos; &amp;&amp; 
+(CC_CDIOwnerManager__c= &apos;T9995J4&apos; 
+|| CC_CDIOwnerManager__c= &apos;T6277T0&apos;
+|| CC_CDIOwnerManager__c= &apos;T7930ER&apos;
+|| CC_CDIOwnerManager__c= &apos;T2041BK&apos;
+|| CC_CDIOwnerManager__c= &apos;T8655DP&apos; 
+|| CC_CDIOwnerManager__c= &apos;T7857KM&apos;
+|| CC_CDIOwnerManager__c= &apos;T1245RG&apos;
+|| CC_CDIOwnerManager__c= &apos;T3274J0&apos; 
+|| CC_CDIOwnerManager__c= &apos;T1779MM&apos; 
+|| CC_CDIOwnerManager__c= &apos;T0933SS&apos; 
+|| CC_CDIOwnerManager__c= &apos;T3976RK&apos; 
+|| CC_CDIOwnerManager__c= &apos;T5631MA&apos; 
+|| CC_CDIOwnerManager__c= &apos;T0997TK&apos;
+|| CC_CDIOwnerManager__c= &apos;T5467EW&apos; 
+|| CC_CDIOwnerManager__c= &apos;T8540MF&apos;
+|| CC_CDIOwnerManager__c= &apos;T0188T1&apos;
+|| CC_CDIOwnerManager__c= &apos;T5854CE&apos;
+|| CC_CDIOwnerManager__c= &apos;T4127NI&apos;
+|| CC_CDIOwnerManager__c= &apos;T7371RS&apos; 
+|| CC_CDIOwnerManager__c= &apos;T3085GJ&apos; 
+|| CC_CDIOwnerManager__c= &apos;T5349RC&apos; 
+|| CC_CDIOwnerManager__c= &apos;T1416MM&apos; 
+|| CC_CDIOwnerManager__c= &apos;T0539J0&apos;
+|| CC_CDIOwnerManager__c= &apos;T4893CO&apos; 
+|| CC_CDIOwnerManager__c= &apos;T8731CI&apos; 
+|| CC_CDIOwnerManager__c= &apos;T0130DL&apos;
+|| CC_CDIOwnerManager__c= &apos;T1286TV&apos; 
+|| CC_CDIOwnerManager__c= &apos;T4880PH&apos;
+|| CC_CDIOwnerManager__c= &apos;T1655TN&apos;
+|| CC_CDIOwnerManager__c= &apos;T1835RC&apos;
+|| CC_CDIOwnerManager__c= &apos;T5295EJ&apos;
+|| CC_CDIOwnerManager__c= &apos;T5333GB&apos;
+|| CC_CDIOwnerManager__c= &apos;T6494MW&apos;
+|| CC_CDIOwnerManager__c= &apos;T4503SM&apos;
+|| CC_CDIOwnerManager__c= &apos;T5139AM&apos;
+|| CC_CDIOwnerManager__c= &apos;T4012KT&apos;
+|| CC_CDIOwnerManager__c= &apos;T7368C1&apos;
+|| CC_CDIOwnerManager__c= &apos;T5471PK&apos;
+|| CC_CDIOwnerManager__c= &apos;T2065JG&apos;
+|| CC_CDIOwnerManager__c= &apos;T0555WE&apos;
+|| CC_CDIOwnerManager__c= &apos;T3569MD&apos;
+|| CC_CDIOwnerManager__c= &apos;T6684WF&apos;
+|| CC_CDIOwnerManager__c= &apos;T5849BM&apos;
+|| CC_CDIOwnerManager__c= &apos;T6881MH&apos;)</formula>
+    </entryCriteria>
+    <finalApprovalRecordLock>false</finalApprovalRecordLock>
+    <finalRejectionActions>
+        <action>
+            <name>NAFTA_UpdateStatus_on_Rejection_CDI</name>
+            <type>FieldUpdate</type>
+        </action>
+    </finalRejectionActions>
+    <finalRejectionRecordLock>false</finalRejectionRecordLock>
+    <label>CDI And FR Approval Based On Manager</label>
+    <nextAutomatedApprover>
+        <useApproverFieldOfRecordOwner>false</useApproverFieldOfRecordOwner>
+        <userHierarchyField>Manager</userHierarchyField>
+    </nextAutomatedApprover>
+    <processOrder>2</processOrder>
+    <recallActions>
+        <action>
+            <name>CC_CDIRequestStatusRecalled</name>
+            <type>FieldUpdate</type>
+        </action>
+    </recallActions>
+    <recordEditability>AdminOrCurrentApprover</recordEditability>
+    <showApprovalHistory>true</showApprovalHistory>
+</ApprovalProcess>

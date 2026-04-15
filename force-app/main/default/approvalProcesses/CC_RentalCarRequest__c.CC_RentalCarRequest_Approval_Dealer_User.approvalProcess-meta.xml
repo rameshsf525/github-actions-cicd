@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ApprovalProcess xmlns="http://soap.sforce.com/2006/04/metadata">
+    <active>true</active>
+    <allowRecall>true</allowRecall>
+    <allowedSubmitters>
+        <type>creator</type>
+    </allowedSubmitters>
+    <allowedSubmitters>
+        <type>owner</type>
+    </allowedSubmitters>
+    <approvalPageFields>
+        <field>Name</field>
+        <field>CC_HaveotherRCRwithin30days__c</field>
+        <field>CC_Case__c</field>
+        <field>NAFTA_PremiumVehicleRental__c</field>
+        <field>NAFTA_AlfaRental__c</field>
+        <field>CC_TotalRentalAmount__c</field>
+        <field>CC_OriginalRentalStartDate__c</field>
+        <field>CC_StartDate__c</field>
+        <field>CC_EndDate__c</field>
+        <field>CC_TotalCostOfRental__c</field>
+        <field>CC_TotalDaysOfRental__c</field>
+        <field>CC_TotalDaysRental__c</field>
+        <field>CC_TotalRentalDaysProvidedByAgent__c</field>
+        <field>CC_TotalRentalDaysProvidedByDealer__c</field>
+        <field>CC_Vehicle__c</field>
+    </approvalPageFields>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>CC_AreaManager__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <entryCriteria>
+            <formula>(CC_TotalRentalDaysProvidedByDealer__c + CC_TotalRentalDaysProvidedByAgent__c) &gt; 10 &amp;&amp; ((CC_TotalRentalDaysProvidedByDealer__c + CC_TotalRentalDaysProvidedByAgent__c) - CC_TotalDaysRental__c) &lt;= 10</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>ApproveRecord</ifCriteriaNotMet>
+        <label>Level 1</label>
+        <name>Step_1</name>
+    </approvalStep>
+    <description>Auto approve if the rental car request created by dealer is less than 10 days.</description>
+    <enableMobileDeviceAccess>false</enableMobileDeviceAccess>
+    <entryCriteria>
+        <formula>AND( ISPICKVAL(CC_Status__c,&quot;Submitted&quot;), RecordType.DeveloperName == &apos;CC_RentalCarByDealer&apos;)</formula>
+    </entryCriteria>
+    <finalApprovalActions>
+        <action>
+            <name>CC_Rental_Car_Request_Status_Approved</name>
+            <type>FieldUpdate</type>
+        </action>
+        <action>
+            <name>CC_UpdateRTDealerApprovedForRental</name>
+            <type>FieldUpdate</type>
+        </action>
+    </finalApprovalActions>
+    <finalApprovalRecordLock>false</finalApprovalRecordLock>
+    <finalRejectionActions>
+        <action>
+            <name>CC_Rental_Car_Request_Status_Rejected</name>
+            <type>FieldUpdate</type>
+        </action>
+    </finalRejectionActions>
+    <finalRejectionRecordLock>false</finalRejectionRecordLock>
+    <label>Rental Car Request Approval Dealer User</label>
+    <nextAutomatedApprover>
+        <useApproverFieldOfRecordOwner>false</useApproverFieldOfRecordOwner>
+        <userHierarchyField>Manager</userHierarchyField>
+    </nextAutomatedApprover>
+    <processOrder>3</processOrder>
+    <recallActions>
+        <action>
+            <name>CC_RentalCarRequestStatusRecalled</name>
+            <type>FieldUpdate</type>
+        </action>
+    </recallActions>
+    <recordEditability>AdminOrCurrentApprover</recordEditability>
+    <showApprovalHistory>false</showApprovalHistory>
+</ApprovalProcess>

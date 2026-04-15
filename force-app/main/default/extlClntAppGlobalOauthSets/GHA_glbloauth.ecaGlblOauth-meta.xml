@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ExtlClntAppGlobalOauthSettings xmlns="http://soap.sforce.com/2006/04/metadata">
+    <callbackUrl>http://localhost</callbackUrl>
+    <consumerKey>3MVG9HtWXcDGV.nEQtj_69kOLc75QyGTHsFJhGOb5UO3QqlG4.uOEC1QQe51QcWF19VMHo_0pDpv88G78X544</consumerKey>
+    <externalClientApplication>GHA</externalClientApplication>
+    <isClientCredentialsFlowEnabled>true</isClientCredentialsFlowEnabled>
+    <isConsumerSecretOptional>false</isConsumerSecretOptional>
+    <isDeviceFlowEnabled>false</isDeviceFlowEnabled>
+    <isIntrospectAllTokens>false</isIntrospectAllTokens>
+    <isPkceRequired>true</isPkceRequired>
+    <isRefreshTokenRotationEnabled>false</isRefreshTokenRotationEnabled>
+    <isSecretRequiredForRefreshToken>true</isSecretRequiredForRefreshToken>
+    <isSecretRequiredForTokenExchange>true</isSecretRequiredForTokenExchange>
+    <isTokenExchangeEnabled>false</isTokenExchangeEnabled>
+    <label>GHA_glbloauth</label>
+    <shouldRotateConsumerKey>false</shouldRotateConsumerKey>
+    <shouldRotateConsumerSecret>false</shouldRotateConsumerSecret>
+</ExtlClntAppGlobalOauthSettings>
