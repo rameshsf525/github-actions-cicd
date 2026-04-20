@@ -1,1 +1,10 @@
-SF metadata retrieval
+SF metadata retrieval from VS code
+
+1- sf org login web
+
+2- sf org display
+
+3-sf project generate manifest --output-dir ./manifest --from-org "ramesh.guduru83560@agentforce.com"
+// [replace as per Org user name - "ramesh.guduru83560@agentforce.com"]
+4- sf project retrieve start --manifest "C:\Users\RameshGuduru\Documents\GitHub-Desktop\github_actions_att\manifest\package.xml" --target-org ramesh.guduru83560@agentforce.com --wait 3600
+// [replace path & user name ]
