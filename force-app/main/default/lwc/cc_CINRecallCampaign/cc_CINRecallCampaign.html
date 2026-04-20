@@ -1,0 +1,32 @@
+<template>
+    <template lwc:if={recordsToDisplay}>
+        <template lwc:if={isRecallData}>
+            <lightning-datatable hide-checkbox-column="true" data={recordsToDisplay} columns={recallColumns}
+                key-field="id" class="dataTable" style="overflow: scroll-hidden" onrowaction={viewRecallRecord}>
+            </lightning-datatable>
+            <!--Modal Component-->
+            <template lwc:if={showModal}>
+                <c-cc-_-C-I-N-_--Recall-Data-Modal recallcampaigndata={recallcampaigndata} recordid={selectedRecordId}
+                    onclose={CloseModalHandle}>
+                </c-cc-_-C-I-N-_--Recall-Data-Modal>
+            </template>
+            <div class="slds-align_absolute-center">
+                <lightning-button label="Previous" icon-name="utility:chevronleft" onclick={previousHandler}
+                    disabled={isPreviousDisable}>
+                </lightning-button>
+                <span class="slds-badge slds-badge_lightest" style="margin-right: 10px;margin-left: 10px;">
+                    Displaying {startingRecord} to {endingRecord} of {totalNumberOfRecords} records.
+                    Page {page} of {totalPage}.
+                </span>
+
+                <lightning-button label="Next" icon-name="utility:chevronright" icon-position="right"
+                    onclick={nextHandler} disabled={isNextDisable}>
+                </lightning-button>
+            </div>
+        </template>
+    </template>
+    <template lwc:else>
+        <p style="color:red;text-align: center;">{noDataFoundErr}</p>
+    </template>
+
+</template>
