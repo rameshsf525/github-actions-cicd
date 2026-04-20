@@ -1,0 +1,43 @@
+<!--
+  @description       : cc_CaseAgedDispositionHistory - display case age disposition history
+  @author            : Geeth M
+  @group             : 
+  @last modified on  : 01-22-2024/07-23-2024
+  @last modified by  : ChangeMeIn@UserSettingsUnder.SFDoc/Haripriya
+
+
+-->
+<template>
+    <lightning-record-edit-form object-api-name="Case" record-id={recordId} onsuccess={handleSuccess} onsubmit={handleSubmit} onerror={handleError}>     
+        <div class="slds-grid slds-grid_vertical-align-end slds-var-m-bottom_medium"> 
+            <div class="slds-col" style="width:55%">
+                <lightning-input-field field-name={caseagedisposition}> </lightning-input-field>  
+            </div>  
+            <div class="slds-col" style="padding-bottom:1%;">
+                <lightning-button variant="brand" type="submit" label="Save" >
+                </lightning-button>
+            </div>                
+        </div>        
+    </lightning-record-edit-form>
+    <template if:true={isLoading}>
+        <div class="slds-is-relative">
+            <div class="slds-spinner_container">
+                <lightning-spinner alternative-text="Loading"></lightning-spinner>
+            </div>
+        </div>
+    </template>
+    
+    <template if:true={caseHistoryList}>
+        <lightning-datatable data={caseHistoryList} columns={columns} key-field="Id" 
+        hide-checkbox-column 
+        show-row-number-column>
+        </lightning-datatable>
+    </template>
+    <template if:true={noRecordsFlag}>
+        <h3>History not available.</h3>
+    </template>
+
+    <template if:true={error}>
+        <div class="slds-text-color_error">{error}</div>
+    </template>
+</template>

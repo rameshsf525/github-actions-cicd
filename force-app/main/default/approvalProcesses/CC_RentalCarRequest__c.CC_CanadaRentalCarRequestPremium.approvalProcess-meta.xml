@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ApprovalProcess xmlns="http://soap.sforce.com/2006/04/metadata">
+    <active>true</active>
+    <allowRecall>true</allowRecall>
+    <allowedSubmitters>
+        <submitter>CC_FinanceManagerCanada</submitter>
+        <type>roleSubordinatesInternal</type>
+    </allowedSubmitters>
+    <approvalPageFields>
+        <field>Name</field>
+        <field>CC_Case__c</field>
+        <field>NAFTA_PremiumVehicleRental__c</field>
+        <field>NAFTA_AlfaRental__c</field>
+        <field>CC_TotalRentalAmount__c</field>
+    </approvalPageFields>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <type>userHierarchyField</type>
+            </approver>
+        </assignedApprover>
+        <description>Assign to Manager</description>
+        <entryCriteria>
+            <formula>OR(
+(AND(
+CONTAINS(CreatedBy.UserRole.Name,&quot;Specialist Junior&quot;),
+OR(
+((ISPICKVAL(CC_DailyRate__c ,&quot;Regular&quot;) || ISPICKVAL(CC_DailyRate__c ,&quot;Premium&quot;) || 
+ISPICKVAL(CC_DailyRate__c ,&quot;Competitive vehicle&quot;) )&amp;&amp; (CC_TotalRentalDaysProvidedByAgent__c + 
+CC_TotalRentalDaysProvidedByDealer__c ) &gt; 3) , ISPICKVAL(CC_DailyRate__c ,&quot;Other (special circumstances)&quot;)
+)
+)
+),
+(AND(
+CONTAINS(CreatedBy.UserRole.Name,&quot;Specialist Senior&quot;),
+OR(
+((ISPICKVAL(CC_DailyRate__c ,&quot;Regular&quot;) || ISPICKVAL(CC_DailyRate__c ,&quot;Premium&quot;) || 
+ISPICKVAL(CC_DailyRate__c ,&quot;Competitive vehicle&quot;) )&amp;&amp; (CC_TotalRentalDaysProvidedByAgent__c + 
+CC_TotalRentalDaysProvidedByDealer__c ) &gt; 10) , ISPICKVAL(CC_DailyRate__c ,&quot;Other (special circumstances)&quot;)
+)
+)
+),
+(AND(
+CONTAINS(CreatedBy.UserRole.Name,&quot;Top Care Agent&quot;),
+OR(
+((ISPICKVAL(CC_DailyRate__c ,&quot;Regular&quot;) || ISPICKVAL(CC_DailyRate__c ,&quot;Premium&quot;) || 
+ISPICKVAL(CC_DailyRate__c ,&quot;Competitive vehicle&quot;) )&amp;&amp; (CC_TotalRentalDaysProvidedByAgent__c + 
+CC_TotalRentalDaysProvidedByDealer__c ) &gt; 20) , ISPICKVAL(CC_DailyRate__c ,&quot;Other (special circumstances)&quot;)
+)
+)
+)
+)</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 1</label>
+        <name>Step_1</name>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <type>userHierarchyField</type>
+            </approver>
+        </assignedApprover>
+        <description>Assign to Operations Manager for Supervisor</description>
+        <entryCriteria>
+            <formula>AND(
+CONTAINS(CreatedBy.UserRole.Name,&quot;Supervisor&quot;),
+OR(
+((ISPICKVAL(CC_DailyRate__c ,&quot;Regular&quot;) || ISPICKVAL(CC_DailyRate__c ,&quot;Premium&quot;) || 
+ISPICKVAL(CC_DailyRate__c ,&quot;Competitive vehicle&quot;) )&amp;&amp; (CC_TotalRentalDaysProvidedByAgent__c + 
+CC_TotalRentalDaysProvidedByDealer__c ) &gt; 20) , ISPICKVAL(CC_DailyRate__c ,&quot;Other (special circumstances)&quot;)
+)
+)</formula>
+        </entryCriteria>
+        <label>Level 1</label>
+        <name>Step_2</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <description>NAFTA 4 CC-544
+Approval process created for Rental Car Requests when the creating user is from Canada market and the status of the rental car request is submitted.</description>
+    <enableMobileDeviceAccess>false</enableMobileDeviceAccess>
+    <entryCriteria>
+        <criteriaItems>
+            <field>CC_RentalCarRequest__c.NAFTA_RentalCaseMarket__c</field>
+            <operation>equals</operation>
+            <value>Canada</value>
+        </criteriaItems>
+        <criteriaItems>
+            <field>CC_RentalCarRequest__c.CC_Status__c</field>
+            <operation>equals</operation>
+            <value>Submitted</value>
+        </criteriaItems>
+        <criteriaItems>
+            <field>CC_RentalCarRequest__c.NAFTA_PremiumVehicleRental__c</field>
+            <operation>equals</operation>
+            <value>True</value>
+        </criteriaItems>
+    </entryCriteria>
+    <finalApprovalActions>
+        <action>
+            <name>CC_Rental_Car_Request_Status_Approved</name>
+            <type>FieldUpdate</type>
+        </action>
+        <action>
+            <name>CC_UpdateRTOfRentalafterApproval</name>
+            <type>FieldUpdate</type>
+        </action>
+    </finalApprovalActions>
+    <finalApprovalRecordLock>false</finalApprovalRecordLock>
+    <finalRejectionActions>
+        <action>
+            <name>CC_Rental_Car_Request_Status_Rejected</name>
+            <type>FieldUpdate</type>
+        </action>
+    </finalRejectionActions>
+    <finalRejectionRecordLock>true</finalRejectionRecordLock>
+    <label>Canada Rental Car Request Premium</label>
+    <nextAutomatedApprover>
+        <useApproverFieldOfRecordOwner>false</useApproverFieldOfRecordOwner>
+        <userHierarchyField>Manager</userHierarchyField>
+    </nextAutomatedApprover>
+    <processOrder>2</processOrder>
+    <recallActions>
+        <action>
+            <name>CC_RentalCarRequestStatusRecalled</name>
+            <type>FieldUpdate</type>
+        </action>
+    </recallActions>
+    <recordEditability>AdminOrCurrentApprover</recordEditability>
+    <showApprovalHistory>false</showApprovalHistory>
+</ApprovalProcess>

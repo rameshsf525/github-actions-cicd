@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ApprovalProcess xmlns="http://soap.sforce.com/2006/04/metadata">
+    <active>true</active>
+    <allowRecall>false</allowRecall>
+    <allowedSubmitters>
+        <type>owner</type>
+    </allowedSubmitters>
+    <approvalPageFields>
+        <field>Name</field>
+        <field>Owner</field>
+    </approvalPageFields>
+    <approvalStep>
+        <allowDelegate>false</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>CC_Knowledge_Managers</name>
+                <type>queue</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <label>Step 1</label>
+        <name>Step_1</name>
+    </approvalStep>
+    <description>CC-246 --- The system can allow entry of notes/ feedback tagged to article</description>
+    <emailTemplate>unfiled$public/CC_Knowledge_Manager_Notification_Template_New_Request</emailTemplate>
+    <enableMobileDeviceAccess>false</enableMobileDeviceAccess>
+    <entryCriteria>
+        <booleanFilter>1</booleanFilter>
+        <criteriaItems>
+            <field>CC_Article_Feedback__c.CC_FeedbackType__c</field>
+            <operation>equals</operation>
+            <value>Article Feedback</value>
+        </criteriaItems>
+    </entryCriteria>
+    <finalApprovalActions>
+        <action>
+            <name>CC_Send_Email_to_Article_Feedback_Record_Owner</name>
+            <type>Alert</type>
+        </action>
+        <action>
+            <name>Change_Article_Status_Incorporated</name>
+            <type>FieldUpdate</type>
+        </action>
+    </finalApprovalActions>
+    <finalApprovalRecordLock>false</finalApprovalRecordLock>
+    <finalRejectionActions>
+        <action>
+            <name>CC_Change_Article_Feedback_Status_Reject</name>
+            <type>FieldUpdate</type>
+        </action>
+        <action>
+            <name>CC_Send_Email_to_Article_Feedback_Record_Owner_Rejection</name>
+            <type>Alert</type>
+        </action>
+    </finalRejectionActions>
+    <finalRejectionRecordLock>false</finalRejectionRecordLock>
+    <initialSubmissionActions>
+        <action>
+            <name>CC_Change_Article_Status_Under_Review</name>
+            <type>FieldUpdate</type>
+        </action>
+    </initialSubmissionActions>
+    <label>CC_Article Feedback Approval</label>
+    <processOrder>2</processOrder>
+    <recordEditability>AdminOrCurrentApprover</recordEditability>
+    <showApprovalHistory>true</showApprovalHistory>
+</ApprovalProcess>

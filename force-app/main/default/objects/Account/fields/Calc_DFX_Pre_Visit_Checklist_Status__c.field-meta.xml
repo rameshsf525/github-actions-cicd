@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Calc_DFX_Pre_Visit_Checklist_Status__c</fullName>
+    <description>&quot;IF(CountSubString(ToUpper(OSS_Configured),&quot;&quot;COMPLETE&quot;&quot;)&gt;0 &amp;
+CountSubString(ToUpper(AL_Configured),&quot;&quot;COMPLETE&quot;&quot;)&gt;0 &amp;
+Visit_Website_?_Scheduler_App==&quot;&quot;WORKING WELL&quot;&quot; &amp;
+DMS_Reviewed==&quot;&quot;NO CONCERNS&quot;&quot; &amp;
+Verify_DMS_IDs==&quot;&quot;WORKING WELL&quot;&quot; &amp;
+Factory_Pricing==&quot;&quot;COMPLETED&quot;&quot; &amp;
+Dealer_Pricing==&quot;&quot;COMPLETED&quot;&quot; &amp;
+Concerns_Pricing==&quot;&quot;COMPLETED&quot;&quot; &amp;
+Triage_Pricing==&quot;&quot;COMPLETED&quot;&quot; &amp;
+MVP_Pricing==&quot;&quot;COMPLETED&quot;&quot;,
+&quot;&quot;Complete&quot;&quot;,&quot;&quot;Incomplete&quot;&quot;)&quot;</description>
+    <externalId>false</externalId>
+    <label>DFX Pre-Visit Checklist Status</label>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>false</trackHistory>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Complete</fullName>
+                <default>false</default>
+                <label>Complete</label>
+            </value>
+            <value>
+                <fullName>Incomplete</fullName>
+                <default>false</default>
+                <label>Incomplete</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

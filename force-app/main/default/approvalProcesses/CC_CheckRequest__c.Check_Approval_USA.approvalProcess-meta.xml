@@ -1,0 +1,529 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ApprovalProcess xmlns="http://soap.sforce.com/2006/04/metadata">
+    <active>false</active>
+    <allowRecall>true</allowRecall>
+    <allowedSubmitters>
+        <type>owner</type>
+    </allowedSubmitters>
+    <allowedSubmitters>
+        <submitter>CC_Director</submitter>
+        <type>roleSubordinatesInternal</type>
+    </allowedSubmitters>
+    <approvalPageFields>
+        <field>Name</field>
+        <field>CC_CheckAmount__c</field>
+    </approvalPageFields>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>CC_FCA_Director__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <description>Assign to Director</description>
+        <entryCriteria>
+            <formula>(OR(
+(CONTAINS(CreatedBy.UserRole.Name,&apos;FCA RO / Manager (USA)&apos;)&amp;&amp;
+((!(ISBLANK(NAFTA_RecallAmount__c))&amp;&amp;(CC_CheckAmount__c&gt;NAFTA_RecallAmount__c)&amp;&amp;(CC_CheckAmount__c&gt;25000))||((ISBLANK(NAFTA_RecallAmount__c))&amp;&amp;CC_CheckAmount__c&gt;25000))&amp;&amp;(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))&amp;&amp;ISPICKVAL(CC_Status__c,&apos;Submitted&apos;)
+),
+(CONTAINS(CreatedBy.UserRole.Name,&apos;FCA RO / Manager (USA)&apos;)&amp;&amp;!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))&amp;&amp;ISPICKVAL(CC_Status__c,&apos;Submitted&apos;)&amp;&amp; CC_CheckAmount__c&gt;25000)
+))</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 1.0</label>
+        <name>Level_1_0</name>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <type>userHierarchyField</type>
+            </approver>
+        </assignedApprover>
+        <description>Assign to Manager</description>
+        <entryCriteria>
+            <formula>AND(CreatedBy.ManagerId &lt;&gt; CC_FCA_Finance__c &amp;&amp; CreatedBy.ManagerId &lt;&gt; CC_FCA_Finance__r.ManagerId &amp;&amp; ISPICKVAL(CC_Status__c,&apos;Submitted&apos;),
+(OR(
+(CONTAINS(CreatedBy.UserRole.Name,&apos;Advisor&apos;)&amp;&amp;!(ISPICKVAL(CreatedBy.CC_Unique_Business_Role__c,&apos;Jr. Operations Manager&apos;))&amp;&amp;CC_CheckAmount__c&gt;0&amp;&amp;(!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) || (ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))) &amp;&amp;(CC_CNAUpdate__c==true || CC_CNAUpdate__c==false)&amp;&amp; ( CC_Junior_Operations_Manager__c = true|| CC_Junior_Operations_Manager__c = false) &amp;&amp; (ISBLANK(NAFTA_RecallAmount__c)||NAFTA_RecallAmount__c &gt; 0)),
+(CONTAINS(CreatedBy.UserRole.Name,&apos;Specialist&apos;)&amp;&amp;!(ISPICKVAL(CreatedBy.CC_Unique_Business_Role__c,&apos;Jr. Operations Manager&apos;))&amp;&amp;( CC_Junior_Operations_Manager__c = true|| CC_Junior_Operations_Manager__c = false) &amp;&amp; ((CC_CheckAmount__c&gt;500 &amp;&amp; CC_CNAUpdate__c==false &amp;&amp; !(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)))||((!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) || (ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))) &amp;&amp; (CC_CNAUpdate__c==true || CC_CNAUpdate__c==false) &amp;&amp; (ISBLANK(NAFTA_RecallAmount__c)||NAFTA_RecallAmount__c &gt; 0) &amp;&amp; CC_CheckAmount__c&gt;0))),
+(CONTAINS(CreatedBy.UserRole.Name,&apos;Supervisor&apos;)&amp;&amp; !(ISPICKVAL(CreatedBy.CC_Unique_Business_Role__c,&apos;Jr. Operations Manager&apos;)) &amp;&amp;
+(((ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) &amp;&amp; (CC_CNAUpdate__c==true || CC_CNAUpdate__c==false) &amp;&amp; ( CC_Junior_Operations_Manager__c = true|| CC_Junior_Operations_Manager__c = false) &amp;&amp; !ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c&gt; NAFTA_RecallAmount__c)||((!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) || (ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))) &amp;&amp; CC_CNAUpdate__c==true &amp;&amp; CC_Junior_Operations_Manager__c = true &amp;&amp; ((ISBLANK(NAFTA_RecallAmount__c)||NAFTA_RecallAmount__c &gt; 0)) &amp;&amp; CC_CheckAmount__c &gt; 0)||((!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) || (ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))) &amp;&amp; CC_CNAUpdate__c==false &amp;&amp; CC_Junior_Operations_Manager__c = true &amp;&amp; CC_CheckAmount__c &gt; 1500)||( (!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) || (ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))) &amp;&amp; (CC_CNAUpdate__c==true || CC_CNAUpdate__c==false) &amp;&amp;  CC_Junior_Operations_Manager__c = false &amp;&amp; CC_CheckAmount__c &gt; 2500))),
+(ISPICKVAL(CreatedBy.CC_Unique_Business_Role__c,&apos;Jr. Operations Manager&apos;) &amp;&amp; ( CC_Junior_Operations_Manager__c = true|| CC_Junior_Operations_Manager__c = false) &amp;&amp; (CC_CNAUpdate__c==true || CC_CNAUpdate__c==false) &amp;&amp; (((!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) || (ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))) &amp;&amp; ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; 2500)||((ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) &amp;&amp; NAFTA_RecallAmount__c &gt; 0 &amp;&amp; CC_CheckAmount__c &gt; NAFTA_RecallAmount__c ))),
+(CONTAINS(CreatedBy.UserRole.Name,&apos;Operation Head - USA&apos;) &amp;&amp; !(ISPICKVAL(CreatedBy.CC_Unique_Business_Role__c,&apos;Jr. Operations Manager&apos;)) &amp;&amp; (CC_CNAUpdate__c==true || CC_CNAUpdate__c==false) &amp;&amp;  ( CC_Junior_Operations_Manager__c = true|| CC_Junior_Operations_Manager__c = false) &amp;&amp; (((ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) &amp;&amp; !ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; NAFTA_RecallAmount__c)||((!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) || (ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))) &amp;&amp; CC_CheckAmount__c &gt; 5000)))
+)))</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>My Level 1</label>
+        <name>Level_1</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <type>userHierarchyField</type>
+            </approver>
+        </assignedApprover>
+        <description>Assign to Manager</description>
+        <entryCriteria>
+            <formula>AND(CreatedBy.ManagerId &lt;&gt; CC_FCA_Finance__c &amp;&amp; CreatedBy.ManagerId &lt;&gt; CC_FCA_Finance__r.ManagerId &amp;&amp; ISPICKVAL(CC_Status__c,&apos;Submitted&apos;),
+(OR(
+(CONTAINS(CreatedBy.UserRole.Name,&apos;FCA Sr Professional - USA&apos;) &amp;&amp; !(ISPICKVAL(CreatedBy.CC_Unique_Business_Role__c,&apos;Jr. Operations Manager&apos;)) &amp;&amp;(CC_CNAUpdate__c==true || CC_CNAUpdate__c==false)&amp;&amp; ( CC_Junior_Operations_Manager__c = true|| CC_Junior_Operations_Manager__c = false) &amp;&amp; 
+((ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) &amp;&amp; (!ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c&gt; NAFTA_RecallAmount__c &amp;&amp; CC_CheckAmount__c &gt; 10000))||((!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) || (ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))) &amp;&amp; (ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c&gt;10000))),
+
+(CONTAINS(CreatedBy.UserRole.Name,&apos;FCA RO / Manager (USA)&apos;) &amp;&amp; !(ISPICKVAL(CreatedBy.CC_Unique_Business_Role__c,&apos;Jr. Operations Manager&apos;)) &amp;&amp;(CC_CNAUpdate__c==true || CC_CNAUpdate__c==false)&amp;&amp; ( CC_Junior_Operations_Manager__c = true|| CC_Junior_Operations_Manager__c = false) &amp;&amp; 
+((ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) &amp;&amp; (!ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c&gt; NAFTA_RecallAmount__c &amp;&amp; CC_CheckAmount__c &gt; 25000))||((!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) || (ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))) &amp;&amp; (ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c&gt;25000))),
+(CONTAINS(CreatedBy.UserRole.Name, &apos;Top Care Agent - USA&apos;) &amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;) &amp;&amp; CC_CheckAmount__c &gt; 5000),
+
+(CONTAINS(CreatedBy.UserRole.Name, &apos;Special Investigation team&apos;)&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)&amp;&amp; CC_CheckAmount__c &gt; 2500),
+
+(CONTAINS(CreatedBy.UserRole.Name, &apos;Level3 Agent&apos;)&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)&amp;&amp; CC_CNAUpdate__c == true &amp;&amp; CC_CheckAmount__c &gt; 0),
+
+(CONTAINS(CreatedBy.UserRole.Name, &apos;Level3 Agent&apos;)&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)&amp;&amp; CC_CNAUpdate__c == false&amp;&amp; CC_CheckAmount__c &gt;1000),
+
+(CONTAINS(CreatedBy.UserRole.Name,&apos;Area Manager&apos;)&amp;&amp;ISPICKVAL(CC_Status__c,&apos;Submitted&apos;)&amp;&amp;CC_CheckAmount__c&gt;2500&amp;&amp;CC_CNAUpdate__c==false),
+
+(CONTAINS(CreatedBy.UserRole.Name,&apos;Area Manager&apos;)&amp;&amp;CC_CheckAmount__c&gt;0&amp;&amp;ISPICKVAL(CC_Status__c,&apos;Submitted&apos;)&amp;&amp;CC_CNAUpdate__c==true),
+
+(CONTAINS(CreatedBy.UserRole.Name,&apos;CRM&apos;)&amp;&amp;ISPICKVAL(CC_Status__c,&apos;Submitted&apos;)&amp;&amp;CC_CheckAmount__c&gt;5000)
+)))</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 1</label>
+        <name>Level_1_SrProfessional_RoManager</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>CC_FCA_Director__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <description>Assign to Director</description>
+        <entryCriteria>
+            <formula>AND(CONTAINS(CreatedBy.UserRole.Name,&apos;FCA Sr Professional - USA&apos;)&amp;&amp; ISPICKVAL(CC_Status__c,&apos;Submitted&apos;),(OR(
+((ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))&amp;&amp;((!(ISBLANK(NAFTA_RecallAmount__c))&amp;&amp;(CC_CheckAmount__c&gt;NAFTA_RecallAmount__c)&amp;&amp;(CC_CheckAmount__c&gt;25000))||((ISBLANK(NAFTA_RecallAmount__c))&amp;&amp;CC_CheckAmount__c&gt;25000))),
+(!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))&amp;&amp;CC_CheckAmount__c &gt;25000)
+)))</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 2.0</label>
+        <name>Level_2_0</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>NAFTA_ManagerOfManager__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <description>Assign to ManagerofManager</description>
+        <entryCriteria>
+            <formula>AND(CreatedBy.ManagerId &lt;&gt; CC_FCA_Finance__c &amp;&amp; CreatedBy.ManagerId &lt;&gt; CC_FCA_Finance__r.ManagerId &amp;&amp; ISPICKVAL(CC_Status__c,&apos;Submitted&apos;),
+(OR(
+(OR(CONTAINS(CreatedBy.UserRole.Name,&apos;Advisor&apos;),CONTAINS(CreatedBy.UserRole.Name,&apos;Specialist&apos;)) &amp;&amp; !(ISPICKVAL(CreatedBy.CC_Unique_Business_Role__c,&apos;Jr. Operations Manager&apos;)) &amp;&amp; (!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) || (ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))) &amp;&amp; (( CC_CNAUpdate__c==false &amp;&amp; CC_Junior_Operations_Manager__c = true &amp;&amp; ((ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; 1500)||(!ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; NAFTA_RecallAmount__c)) )||
+((CC_CNAUpdate__c==true || CC_CNAUpdate__c==false) &amp;&amp; CC_Junior_Operations_Manager__c = false &amp;&amp; ((ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; 2500)||(!ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; 2500)))||
+(CC_CNAUpdate__c==true &amp;&amp; ((ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; 0)||(!ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; 0))))),
+
+(CONTAINS(CreatedBy.UserRole.Name,&apos;Supervisor&apos;)&amp;&amp; !(ISPICKVAL(CreatedBy.CC_Unique_Business_Role__c,&apos;Jr. Operations Manager&apos;)) &amp;&amp; (CC_CNAUpdate__c==true || CC_CNAUpdate__c==false) &amp;&amp; (((!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) || (ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))) &amp;&amp; CC_Junior_Operations_Manager__c = true &amp;&amp; ISBLANK(NAFTA_RecallAmount__c) &amp;&amp;  CC_CheckAmount__c &gt; 2500)||
+((!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) || (ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))) &amp;&amp; CC_Junior_Operations_Manager__c = false &amp;&amp; ISBLANK(NAFTA_RecallAmount__c) &amp;&amp;  CC_CheckAmount__c &gt; 5000)||
+((ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) &amp;&amp; CC_Junior_Operations_Manager__c = false &amp;&amp; (!ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; 5000 &amp;&amp; CC_CheckAmount__c &gt; NAFTA_RecallAmount__c))||
+((ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) &amp;&amp; (!ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; 2500 &amp;&amp; CC_CheckAmount__c &gt; NAFTA_RecallAmount__c) )) ),
+
+(ISPICKVAL(CreatedBy.CC_Unique_Business_Role__c,&apos;Jr. Operations Manager&apos;) &amp;&amp; (CC_CNAUpdate__c==true || CC_CNAUpdate__c==false) &amp;&amp; ( CC_Junior_Operations_Manager__c = true|| CC_Junior_Operations_Manager__c = false) &amp;&amp; ((!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) || (ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))) &amp;&amp; (ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; 5000)||
+((ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) &amp;&amp; (!ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; 5000 &amp;&amp; CC_CheckAmount__c &gt; NAFTA_RecallAmount__c)))),
+
+(CONTAINS(CreatedBy.UserRole.Name,&apos;Operation Head - USA&apos;) &amp;&amp; !(ISPICKVAL(CreatedBy.CC_Unique_Business_Role__c,&apos;Jr. Operations Manager&apos;))&amp;&amp;(CC_CNAUpdate__c==true || CC_CNAUpdate__c==false) &amp;&amp; ( CC_Junior_Operations_Manager__c = true|| CC_Junior_Operations_Manager__c = false) &amp;&amp; ((!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) || (ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))) &amp;&amp; (ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; 10000)||
+((ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) &amp;&amp; (!ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; 10000 &amp;&amp; CC_CheckAmount__c &gt; NAFTA_RecallAmount__c))))
+
+)))</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 2</label>
+        <name>Level_2</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>false</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>NAFTA_ManagerOfManager__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <description>Assign to ManagerofManager</description>
+        <entryCriteria>
+            <formula>AND(CreatedBy.ManagerId &lt;&gt; CC_FCA_Finance__c &amp;&amp; CreatedBy.ManagerId &lt;&gt; CC_FCA_Finance__r.ManagerId &amp;&amp; ISPICKVAL(CC_Status__c,&apos;Submitted&apos;),
+(OR(
+(CONTAINS(CreatedBy.UserRole.Name,&apos;FCA Sr Professional - USA&apos;) &amp;&amp; !(ISPICKVAL(CreatedBy.CC_Unique_Business_Role__c,&apos;Jr. Operations Manager&apos;))&amp;&amp;(CC_CNAUpdate__c==true || CC_CNAUpdate__c==false) &amp;&amp; ( CC_Junior_Operations_Manager__c = true|| CC_Junior_Operations_Manager__c = false) &amp;&amp; ((!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) || (ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))) &amp;&amp; (ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; 0)||
+((ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) &amp;&amp; (!ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; 0)))),
+
+(CONTAINS(CreatedBy.UserRole.Name,&apos;Area Manager&apos;)&amp;&amp;ISPICKVAL(CC_Status__c,&apos;Submitted&apos;)&amp;&amp;CC_CheckAmount__c &gt;5000),
+
+(CONTAINS(CreatedBy.UserRole.Name,&apos;CRM&apos;)&amp;&amp;ISPICKVAL(CC_Status__c,&apos;Submitted&apos;)&amp;&amp;CC_CheckAmount__c &gt;5000),
+
+(CONTAINS(CreatedBy.UserRole.Name,&apos;Top Care Agent - USA&apos;)&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)&amp;&amp; CC_CheckAmount__c &gt; 10000),
+
+(OR(CONTAINS(CreatedBy.UserRole.Name,&apos;Special Investigation team&apos;),CONTAINS(CreatedBy.UserRole.Name,&apos;Level3 Agent&apos;))&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;) &amp;&amp; CC_CheckAmount__c &gt;5000) 
+
+)))</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 2</label>
+        <name>level_two</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>CC_FCA_Director__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <description>Assign to Director</description>
+        <entryCriteria>
+            <formula>(OR(
+(CONTAINS(CreatedBy.UserRole.Name,&apos;Operation Head - USA&apos;) &amp;&amp; !(ISPICKVAL(CreatedBy.CC_Unique_Business_Role__c,&apos;Jr. Operations Manager&apos;))&amp;&amp;((!(ISBLANK(NAFTA_RecallAmount__c))&amp;&amp;(CC_CheckAmount__c&gt;NAFTA_RecallAmount__c)&amp;&amp;(CC_CheckAmount__c&gt;25000))||((ISBLANK(NAFTA_RecallAmount__c))&amp;&amp;CC_CheckAmount__c&gt;25000))&amp;&amp;(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))&amp;&amp;ISPICKVAL(CC_Status__c,&apos;Submitted&apos;)),
+(CONTAINS(CreatedBy.UserRole.Name, &apos;Operation Head - USA&apos;) &amp;&amp; !(ISPICKVAL(CreatedBy.CC_Unique_Business_Role__c,&apos;Jr. Operations Manager&apos;)) &amp;&amp;!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))&amp;&amp; ISPICKVAL(CC_Status__c, &apos;Submitted&apos;)&amp;&amp;CC_CheckAmount__c &gt;25000)
+))</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 3.0</label>
+        <name>Level_3_0</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>NAFTA_ManagerOfManagerOfManager__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <description>Assign to Manager Level 3</description>
+        <entryCriteria>
+            <formula>AND(CreatedBy.ManagerId &lt;&gt; CC_FCA_Finance__c &amp;&amp; CreatedBy.ManagerId &lt;&gt; CC_FCA_Finance__r.ManagerId &amp;&amp; ISPICKVAL(CC_Status__c,&apos;Submitted&apos;),
+(OR(
+
+(OR(CONTAINS(CreatedBy.UserRole.Name,&apos;Advisor&apos;),CONTAINS(CreatedBy.UserRole.Name,&apos;Specialist&apos;)) &amp;&amp; !(ISPICKVAL(CreatedBy.CC_Unique_Business_Role__c,&apos;Jr. Operations Manager&apos;)) &amp;&amp; (CC_CNAUpdate__c==true || CC_CNAUpdate__c==false) &amp;&amp; 
+(
+((!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) || (ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))) &amp;&amp; CC_Junior_Operations_Manager__c = true &amp;&amp; (ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; 2500) ) || 
+((!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))) || (ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) &amp;&amp; CC_Junior_Operations_Manager__c = false &amp;&amp; (ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; 5000)) || 
+((ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) &amp;&amp; CC_Junior_Operations_Manager__c = false &amp;&amp; (!ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; NAFTA_RecallAmount__c &amp;&amp; CC_CheckAmount__c &gt; 5000)) || 
+((ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) &amp;&amp; CC_Junior_Operations_Manager__c = true &amp;&amp; (!ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; NAFTA_RecallAmount__c &amp;&amp; CC_CheckAmount__c &gt; 2500)))),
+
+(CONTAINS(CreatedBy.UserRole.Name,&apos;Supervisor&apos;) &amp;&amp; !(ISPICKVAL(CreatedBy.CC_Unique_Business_Role__c,&apos;Jr. Operations Manager&apos;)) &amp;&amp; (CC_CNAUpdate__c==true || CC_CNAUpdate__c==false) &amp;&amp; (((!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) || (ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))) &amp;&amp; CC_Junior_Operations_Manager__c = true &amp;&amp; (ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; 5000) ) || 
+((!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))) || (ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) &amp;&amp; CC_Junior_Operations_Manager__c = false &amp;&amp; (ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; 10000)) || 
+((ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) &amp;&amp; CC_Junior_Operations_Manager__c = false &amp;&amp; (!ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; NAFTA_RecallAmount__c &amp;&amp; CC_CheckAmount__c &gt; 10000)) || 
+((ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) &amp;&amp; CC_Junior_Operations_Manager__c = true &amp;&amp; (!ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; NAFTA_RecallAmount__c &amp;&amp; CC_CheckAmount__c &gt; 5000)))),
+
+(ISPICKVAL(CreatedBy.CC_Unique_Business_Role__c,&apos;Jr. Operations Manager&apos;) &amp;&amp; (CC_CNAUpdate__c==true || CC_CNAUpdate__c==false) &amp;&amp; ( CC_Junior_Operations_Manager__c = true|| CC_Junior_Operations_Manager__c = false) &amp;&amp; ((!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) || (ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))) &amp;&amp; (ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; 10000)||
+((ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) &amp;&amp; (!ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; 10000 &amp;&amp; CC_CheckAmount__c &gt; NAFTA_RecallAmount__c)))),
+
+
+(CONTAINS(CreatedBy.UserRole.Name,&apos;Operation Head - USA&apos;) &amp;&amp; !(ISPICKVAL(CreatedBy.CC_Unique_Business_Role__c,&apos;Jr. Operations Manager&apos;))&amp;&amp;(CC_CNAUpdate__c==true || CC_CNAUpdate__c==false) &amp;&amp; ( CC_Junior_Operations_Manager__c = true|| CC_Junior_Operations_Manager__c = false) &amp;&amp; ((!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) || (ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))) &amp;&amp; (ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; 5000)||
+((ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) &amp;&amp; (!ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; 5000 &amp;&amp; CC_CheckAmount__c &gt; NAFTA_RecallAmount__c))))
+)))</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 3</label>
+        <name>Level_3</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>NAFTA_ManagerOfManagerOfManager__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <description>Assign to Manager Level 3</description>
+        <entryCriteria>
+            <formula>AND(CreatedBy.ManagerId &lt;&gt; CC_FCA_Finance__c &amp;&amp; CreatedBy.ManagerId &lt;&gt; CC_FCA_Finance__r.ManagerId &amp;&amp; ISPICKVAL(CC_Status__c,&apos;Submitted&apos;),
+(OR(
+(CONTAINS(CreatedBy.UserRole.Name, &apos;Top Care Agent - USA&apos;) &amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;) &amp;&amp; CC_CheckAmount__c &gt;5000),
+
+(OR(CONTAINS(CreatedBy.UserRole.Name,&apos;Special Investigation team&apos; ),CONTAINS(CreatedBy.UserRole.Name,&apos;Level3 Agent&apos;))&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)&amp;&amp; CC_CheckAmount__c &gt; 10000)
+)))</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>ApproveRecord</ifCriteriaNotMet>
+        <label>Level 3</label>
+        <name>level</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>CC_FCA_Director__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <description>Assign to Director</description>
+        <entryCriteria>
+            <formula>(OR(
+(ISPICKVAL(CreatedBy.CC_Unique_Business_Role__c,&apos;Jr. Operations Manager&apos;) &amp;&amp; CC_Junior_Operations_Manager__c = true &amp;&amp;((!(ISBLANK(NAFTA_RecallAmount__c))&amp;&amp;(CC_CheckAmount__c&gt;NAFTA_RecallAmount__c)&amp;&amp;(CC_CheckAmount__c&gt;25000))||((ISBLANK(NAFTA_RecallAmount__c))&amp;&amp;CC_CheckAmount__c&gt;25000))&amp;&amp;(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))&amp;&amp;ISPICKVAL(CC_Status__c,&apos;Submitted&apos;)),
+(ISPICKVAL(CreatedBy.CC_Unique_Business_Role__c,&apos;Jr. Operations Manager&apos;) &amp;&amp; CC_Junior_Operations_Manager__c = true &amp;&amp;!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))&amp;&amp; ISPICKVAL(CC_Status__c, &apos;Submitted&apos;)&amp;&amp;CC_CheckAmount__c &gt;25000),
+
+(CONTAINS(CreatedBy.UserRole.Name,&apos;Supervisor&apos;)&amp;&amp; CC_Junior_Operations_Manager__c = false &amp;&amp; ((!(ISBLANK(NAFTA_RecallAmount__c))&amp;&amp;(CC_CheckAmount__c&gt;NAFTA_RecallAmount__c)&amp;&amp;(CC_CheckAmount__c&gt;25000))||((ISBLANK(NAFTA_RecallAmount__c))&amp;&amp;CC_CheckAmount__c&gt;25000))&amp;&amp;(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))&amp;&amp;ISPICKVAL(CC_Status__c,&apos;Submitted&apos;)),
+(CONTAINS(CreatedBy.UserRole.Name, &apos;Supervisor&apos;)&amp;&amp; CC_Junior_Operations_Manager__c = false &amp;&amp;!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))&amp;&amp; ISPICKVAL(CC_Status__c, &apos;Submitted&apos;)&amp;&amp;CC_CheckAmount__c &gt;25000)
+))</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 4.0</label>
+        <name>Level_4_0</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>CC_ManagerLevel4__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <description>Assign to Manager level 4</description>
+        <entryCriteria>
+            <formula>AND(CreatedBy.ManagerId &lt;&gt; CC_FCA_Finance__c &amp;&amp; CreatedBy.ManagerId &lt;&gt; CC_FCA_Finance__r.ManagerId &amp;&amp; ISPICKVAL(CC_Status__c,&apos;Submitted&apos;),
+(OR(
+(OR(CONTAINS(CreatedBy.UserRole.Name,&apos;Advisor&apos;),CONTAINS(CreatedBy.UserRole.Name,&apos;Specialist&apos;)) &amp;&amp; !(ISPICKVAL(CreatedBy.CC_Unique_Business_Role__c,&apos;Jr. Operations Manager&apos;)) &amp;&amp; (CC_CNAUpdate__c==true || CC_CNAUpdate__c==false) &amp;&amp; 
+(
+((!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) || (ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))) &amp;&amp; CC_Junior_Operations_Manager__c = true &amp;&amp; (ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; 5000) ) || 
+((!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))) || (ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) &amp;&amp; CC_Junior_Operations_Manager__c = false &amp;&amp; (ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; 10000)) || 
+((ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) &amp;&amp; CC_Junior_Operations_Manager__c = false &amp;&amp; (!ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; NAFTA_RecallAmount__c &amp;&amp; CC_CheckAmount__c &gt; 10000)) || 
+((ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) &amp;&amp; CC_Junior_Operations_Manager__c = true &amp;&amp; (!ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; NAFTA_RecallAmount__c &amp;&amp; CC_CheckAmount__c &gt; 5000)))),
+
+(CONTAINS(CreatedBy.UserRole.Name,&apos;Supervisor&apos;) &amp;&amp; !(ISPICKVAL(CreatedBy.CC_Unique_Business_Role__c,&apos;Jr. Operations Manager&apos;)) &amp;&amp; (CC_CNAUpdate__c==true || CC_CNAUpdate__c==false) &amp;&amp; (((!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) || (ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))) &amp;&amp; CC_Junior_Operations_Manager__c = true &amp;&amp; (ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; 10000) ) || 
+((!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))) || (ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) &amp;&amp; CC_Junior_Operations_Manager__c = false &amp;&amp; (ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; 5000)) || 
+((ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) &amp;&amp; CC_Junior_Operations_Manager__c = false &amp;&amp; (!ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; NAFTA_RecallAmount__c &amp;&amp; CC_CheckAmount__c &gt; 5000)) || 
+((ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) &amp;&amp; CC_Junior_Operations_Manager__c = true &amp;&amp; (!ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; NAFTA_RecallAmount__c &amp;&amp; CC_CheckAmount__c &gt; 10000)))),
+
+(ISPICKVAL(CreatedBy.CC_Unique_Business_Role__c,&apos;Jr. Operations Manager&apos;) &amp;&amp; (CC_CNAUpdate__c==true || CC_CNAUpdate__c==false) &amp;&amp; ( CC_Junior_Operations_Manager__c = true|| CC_Junior_Operations_Manager__c = false) &amp;&amp; ((!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) || (ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))) &amp;&amp; (ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; 5000)||
+((ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) &amp;&amp; (!ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; 5000 &amp;&amp; CC_CheckAmount__c &gt; NAFTA_RecallAmount__c)))),
+
+(OR(CONTAINS(CreatedBy.UserRole.Name,&apos;Special Investigation team&apos;),CONTAINS(CreatedBy.UserRole.Name,&apos;Level3 Agent&apos;))&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)&amp;&amp; CC_CheckAmount__c &gt; 5000) 
+)))</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 4</label>
+        <name>Level_4</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>CC_FCA_Director__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <description>Assign to Director</description>
+        <entryCriteria>
+            <formula>AND(!(ISPICKVAL(CreatedBy.CC_Unique_Business_Role__c,&apos;Jr. Operations Manager&apos;)),(OR(
+(CONTAINS(CreatedBy.UserRole.Name,&apos;Supervisor&apos;) &amp;&amp; CC_Junior_Operations_Manager__c = true &amp;&amp; ((!(ISBLANK(NAFTA_RecallAmount__c))&amp;&amp;(CC_CheckAmount__c&gt;NAFTA_RecallAmount__c)&amp;&amp;(CC_CheckAmount__c&gt;25000))||((ISBLANK(NAFTA_RecallAmount__c))&amp;&amp;CC_CheckAmount__c&gt;25000))&amp;&amp;(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))&amp;&amp;ISPICKVAL(CC_Status__c,&apos;Submitted&apos;)),
+(CONTAINS(CreatedBy.UserRole.Name, &apos;Supervisor&apos;) &amp;&amp; CC_Junior_Operations_Manager__c = true &amp;&amp; !(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))&amp;&amp; ISPICKVAL(CC_Status__c, &apos;Submitted&apos;)&amp;&amp;CC_CheckAmount__c &gt;25000),
+
+(OR(CONTAINS(CreatedBy.UserRole.Name, &apos;Advisor&apos; ),
+CONTAINS(CreatedBy.UserRole.Name, &apos;Specialist&apos;)
+) &amp;&amp; CC_Junior_Operations_Manager__c = false &amp;&amp;((!(ISBLANK(NAFTA_RecallAmount__c))&amp;&amp;(CC_CheckAmount__c&gt;NAFTA_RecallAmount__c)&amp;&amp;(CC_CheckAmount__c&gt;25000))||(ISBLANK(NAFTA_RecallAmount__c)&amp;&amp;CC_CheckAmount__c &gt;25000))&amp;&amp;(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))&amp;&amp;ISPICKVAL(CC_Status__c,&apos;Submitted&apos;)),
+(CONTAINS(CreatedBy.UserRole.Name, &apos;Advisor&apos;) &amp;&amp; CC_Junior_Operations_Manager__c = false  &amp;&amp;!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))&amp;&amp; ISPICKVAL(CC_Status__c, &apos;Submitted&apos;)&amp;&amp;CC_CheckAmount__c &gt;25000)
+)))</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 5.0</label>
+        <name>Level_5_0</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>CC_ManagerLevel5__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <description>Assign to Manager Level 5</description>
+        <entryCriteria>
+            <formula>AND(CreatedBy.ManagerId &lt;&gt; CC_FCA_Finance__c &amp;&amp; CreatedBy.ManagerId &lt;&gt; CC_FCA_Finance__r.ManagerId &amp;&amp; ISPICKVAL(CC_Status__c,&apos;Submitted&apos;),
+(OR(
+(OR(CONTAINS(CreatedBy.UserRole.Name,&apos;Advisor&apos;),CONTAINS(CreatedBy.UserRole.Name,&apos;Specialist&apos;)) &amp;&amp; !(ISPICKVAL(CreatedBy.CC_Unique_Business_Role__c,&apos;Jr. Operations Manager&apos;)) &amp;&amp; (CC_CNAUpdate__c==true || CC_CNAUpdate__c==false) &amp;&amp; 
+(
+((!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) || (ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))) &amp;&amp; CC_Junior_Operations_Manager__c = true &amp;&amp; (ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; 10000) ) || 
+((!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))) || (ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) &amp;&amp; CC_Junior_Operations_Manager__c = false &amp;&amp; (ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; 5000)) || 
+((ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) &amp;&amp; CC_Junior_Operations_Manager__c = false &amp;&amp; (!ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; NAFTA_RecallAmount__c &amp;&amp; CC_CheckAmount__c &gt; 5000)) || 
+((ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) &amp;&amp; CC_Junior_Operations_Manager__c = true &amp;&amp; (!ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; NAFTA_RecallAmount__c &amp;&amp; CC_CheckAmount__c &gt; 10000)))),
+
+(CONTAINS(CreatedBy.UserRole.Name,&apos;Supervisor&apos;) &amp;&amp; !(ISPICKVAL(CreatedBy.CC_Unique_Business_Role__c,&apos;Jr. Operations Manager&apos;)) &amp;&amp; (CC_CNAUpdate__c==true || CC_CNAUpdate__c==false) &amp;&amp; CC_Junior_Operations_Manager__c = true &amp;&amp; (
+((!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) || (ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))) &amp;&amp; (ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; 5000)) ||((ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) &amp;&amp; ((!ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; NAFTA_RecallAmount__c &amp;&amp; CC_CheckAmount__c &gt; 5000)))))
+
+)))</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 5</label>
+        <name>Level_5</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>CC_FCA_Director__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <description>Assign to Director</description>
+        <entryCriteria>
+            <formula>AND(ISPICKVAL(CC_Status__c, &apos;Submitted&apos;)&amp;&amp; CC_Junior_Operations_Manager__c = true &amp;&amp; !(ISPICKVAL(CreatedBy.CC_Unique_Business_Role__c,&apos;Jr. Operations Manager&apos;)),(OR(
+(OR(CONTAINS(CreatedBy.UserRole.Name, &apos;Advisor&apos; ),
+CONTAINS(CreatedBy.UserRole.Name, &apos;Specialist&apos;)
+) &amp;&amp;((!(ISBLANK(NAFTA_RecallAmount__c))&amp;&amp;(CC_CheckAmount__c&gt;NAFTA_RecallAmount__c)&amp;&amp;(CC_CheckAmount__c&gt;25000))||(ISBLANK(NAFTA_RecallAmount__c)&amp;&amp;CC_CheckAmount__c &gt;25000))&amp;&amp;(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))),
+(OR(CONTAINS(CreatedBy.UserRole.Name, &apos;Advisor&apos; ),
+CONTAINS(CreatedBy.UserRole.Name, &apos;Specialist&apos;)
+) &amp;&amp;!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))&amp;&amp;CC_CheckAmount__c &gt;25000)
+)))</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 6.0</label>
+        <name>Level_6_0</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>NAFTA_LastManager__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <description>Assign to Manager Level 6</description>
+        <entryCriteria>
+            <formula>AND(CreatedBy.ManagerId &lt;&gt; CC_FCA_Finance__c &amp;&amp; CreatedBy.ManagerId &lt;&gt; CC_FCA_Finance__r.ManagerId &amp;&amp; ISPICKVAL(CC_Status__c,&apos;Submitted&apos;),
+(OR( (OR(CONTAINS(CreatedBy.UserRole.Name,&apos;Advisor&apos;),CONTAINS(CreatedBy.UserRole.Name,&apos;Specialist&apos;)) &amp;&amp; !(ISPICKVAL(CreatedBy.CC_Unique_Business_Role__c,&apos;Jr. Operations Manager&apos;)) &amp;&amp; (CC_CNAUpdate__c==true || CC_CNAUpdate__c==false) &amp;&amp; CC_Junior_Operations_Manager__c = true &amp;&amp; (
+((!(ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) || (ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;))) &amp;&amp; (ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; 5000)) ||((ISPICKVAL(CC_CheckCategory__c,&apos;Recall&apos;)) &amp;&amp; ((!ISBLANK(NAFTA_RecallAmount__c) &amp;&amp; CC_CheckAmount__c &gt; NAFTA_RecallAmount__c &amp;&amp; CC_CheckAmount__c &gt; 5000)))))
+)))</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 6</label>
+        <name>Level_6</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>CC_FCA_Finance__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <description>Route to Finance.</description>
+        <entryCriteria>
+            <formula>OR(
+AND( CC_CheckAmount__c &gt; 5000,OR(OR(CONTAINS(CreatedBy.UserRole.Name,&apos;Advisor&apos;),CONTAINS(CreatedBy.UserRole.Name,&apos;Specialist&apos;)),CONTAINS(CreatedBy.UserRole.Name,&apos;Supervisor&apos;),ISPICKVAL(CreatedBy.CC_Unique_Business_Role__c,&apos;Jr. Operations Manager&apos;),CONTAINS(CreatedBy.UserRole.Name,&apos;Operation Head - USA&apos;),CONTAINS(CreatedBy.UserRole.Name, &apos;Special Investigation team&apos;),CONTAINS(CreatedBy.UserRole.Name,&apos;CRM&apos;),CONTAINS(CreatedBy.UserRole.Name,&apos;Area Manager&apos;),CONTAINS(CreatedBy.UserRole.Name, &apos;Level3 Agent&apos;),CONTAINS(CreatedBy.UserRole.Name, &apos;Top Care Agent - USA&apos;)
+)
+),
+AND(CC_CheckAmount__c &gt; 0,OR(CONTAINS(CreatedBy.UserRole.Name,&apos;FCA Sr Professional - USA&apos;),CONTAINS(CreatedBy.UserRole.Name,&apos;FCA RO / Manager (USA)&apos;))
+))</formula>
+        </entryCriteria>
+        <label>Final Approver</label>
+        <name>Final_Approver</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <description>Approval Path for USA market.</description>
+    <enableMobileDeviceAccess>false</enableMobileDeviceAccess>
+    <entryCriteria>
+        <criteriaItems>
+            <field>CC_CheckRequest__c.NAFTA_CaseMarket__c</field>
+            <operation>equals</operation>
+            <value>USA</value>
+        </criteriaItems>
+        <criteriaItems>
+            <field>CC_CheckRequest__c.CC_Status__c</field>
+            <operation>equals</operation>
+            <value>Submitted</value>
+        </criteriaItems>
+        <criteriaItems>
+            <field>CC_CheckRequest__c.CC_IsOwnersCustomerRetentionUBR__c</field>
+            <operation>equals</operation>
+            <value>False</value>
+        </criteriaItems>
+    </entryCriteria>
+    <finalApprovalActions>
+        <action>
+            <name>CC_CheckRequestStatusApproved</name>
+            <type>FieldUpdate</type>
+        </action>
+    </finalApprovalActions>
+    <finalApprovalRecordLock>true</finalApprovalRecordLock>
+    <finalRejectionActions>
+        <action>
+            <name>Change_Status_To_Rejected</name>
+            <type>FieldUpdate</type>
+        </action>
+    </finalRejectionActions>
+    <finalRejectionRecordLock>false</finalRejectionRecordLock>
+    <label>Check Approval Path USA</label>
+    <nextAutomatedApprover>
+        <useApproverFieldOfRecordOwner>false</useApproverFieldOfRecordOwner>
+        <userHierarchyField>Manager</userHierarchyField>
+    </nextAutomatedApprover>
+    <processOrder>7</processOrder>
+    <recallActions>
+        <action>
+            <name>CC_CheckRequestRequestStatusRecalled</name>
+            <type>FieldUpdate</type>
+        </action>
+    </recallActions>
+    <recordEditability>AdminOrCurrentApprover</recordEditability>
+    <showApprovalHistory>true</showApprovalHistory>
+</ApprovalProcess>

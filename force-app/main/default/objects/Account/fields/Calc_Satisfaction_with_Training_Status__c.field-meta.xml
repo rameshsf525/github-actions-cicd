@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Calc_Satisfaction_with_Training_Status__c</fullName>
+    <description>&quot;CASE(Satisfaction_with_Training==&quot;&quot;5 - VERY SATISFIED&quot;&quot;|
+Satisfaction_with_Training==&quot;&quot;4 - SOMEWHAT SATISFIED&quot;&quot;, &quot;&quot;Green&quot;&quot;,
+Satisfaction_with_Training==&quot;&quot;&quot;&quot;|
+Satisfaction_with_Training==&quot;&quot;Please Select One&quot;&quot;,&quot;&quot;NA&quot;&quot;,
+true,&quot;&quot;Red&quot;&quot;)&quot;</description>
+    <externalId>false</externalId>
+    <label>Satisfaction with Training Status</label>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>false</trackHistory>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Green</fullName>
+                <default>false</default>
+                <label>Green</label>
+            </value>
+            <value>
+                <fullName>NA</fullName>
+                <default>false</default>
+                <label>NA</label>
+            </value>
+            <value>
+                <fullName>Red</fullName>
+                <default>false</default>
+                <label>Red</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

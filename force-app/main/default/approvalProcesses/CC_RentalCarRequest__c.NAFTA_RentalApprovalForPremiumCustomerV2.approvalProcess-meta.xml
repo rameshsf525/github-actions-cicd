@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ApprovalProcess xmlns="http://soap.sforce.com/2006/04/metadata">
+    <active>true</active>
+    <allowRecall>true</allowRecall>
+    <allowedSubmitters>
+        <submitter>CC_Reporting_Manager</submitter>
+        <type>roleSubordinatesInternal</type>
+    </allowedSubmitters>
+    <approvalPageFields>
+        <field>Name</field>
+        <field>CC_Case__c</field>
+        <field>NAFTA_PremiumVehicleRental__c</field>
+        <field>NAFTA_AlfaRental__c</field>
+        <field>CC_TotalRentalAmount__c</field>
+    </approvalPageFields>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <type>userHierarchyField</type>
+            </approver>
+        </assignedApprover>
+        <entryCriteria>
+            <formula>(CONTAINS(CreatedBy.UserRole.Name,&quot;Advisor&quot;) ||
+CONTAINS(CreatedBy.UserRole.Name,&quot;Social Media Agent Junior&quot;))
+&amp;&amp;
+OR
+(((CC_TotalRentalDaysProvidedByAgent__c + CC_TotalRentalDaysProvidedByDealer__c ) &gt; 5
+&amp;&amp;
+ISPICKVAL(CC_DailyRate__c ,&quot;Regular&quot;) ||
+ISPICKVAL(CC_DailyRate__c ,&quot;Premium&quot;) ||
+ISPICKVAL(CC_DailyRate__c ,&quot;Competitive vehicle&quot;) ||
+ISPICKVAL(CC_DailyRate__c ,&quot;Wagoneer&quot;))
+,
+ISPICKVAL(CC_DailyRate__c ,&quot;Other (special circumstances)&quot;))</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 1</label>
+        <name>Step_1</name>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <type>userHierarchyField</type>
+            </approver>
+        </assignedApprover>
+        <entryCriteria>
+            <formula>(CONTAINS(CreatedBy.UserRole.Name,&quot;Specialist New&quot;) ||
+CONTAINS(CreatedBy.UserRole.Name,&quot;Specialist Junior&quot;) ||
+CONTAINS(CreatedBy.UserRole.Name,&quot;Specialist Senior&quot;) ||
+CONTAINS(CreatedBy.UserRole.Name,&quot;Level3 Agent&quot;) ||
+CONTAINS(CreatedBy.UserRole.Name,&quot;Top Care Agent&quot;) ||
+CONTAINS(CreatedBy.UserRole.Name,&quot;Social Media Agent Senior&quot;))
+&amp;&amp;
+OR
+(((CC_TotalRentalDaysProvidedByAgent__c + CC_TotalRentalDaysProvidedByDealer__c ) &gt; 10
+&amp;&amp;
+ISPICKVAL(CC_DailyRate__c ,&quot;Regular&quot;) ||
+ISPICKVAL(CC_DailyRate__c ,&quot;Premium&quot;) ||
+ISPICKVAL(CC_DailyRate__c ,&quot;Competitive vehicle&quot;) ||
+ISPICKVAL(CC_DailyRate__c ,&quot;Wagoneer&quot;))
+,
+ISPICKVAL(CC_DailyRate__c ,&quot;Other (special circumstances)&quot;))</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 1</label>
+        <name>Step_2</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <type>userHierarchyField</type>
+            </approver>
+        </assignedApprover>
+        <entryCriteria>
+            <formula>CONTAINS(CreatedBy.UserRole.Name,&quot;Area Manager&quot;)
+&amp;&amp;
+OR
+(((CC_TotalRentalDaysProvidedByAgent__c + CC_TotalRentalDaysProvidedByDealer__c ) &gt; 20
+&amp;&amp;
+ISPICKVAL(CC_DailyRate__c ,&quot;Regular&quot;) ||
+ISPICKVAL(CC_DailyRate__c ,&quot;Premium&quot;) ||
+ISPICKVAL(CC_DailyRate__c ,&quot;Competitive vehicle&quot;) ||
+ISPICKVAL(CC_DailyRate__c ,&quot;Wagoneer&quot;))
+,
+ISPICKVAL(CC_DailyRate__c ,&quot;Other (special circumstances)&quot;))</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 1</label>
+        <name>Step_3</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>NAFTA_OperationsManager__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <entryCriteria>
+            <formula>CONTAINS(CreatedBy.UserRole.Name,&quot;Supervisor&quot;)
+&amp;&amp;
+OR
+(((CC_TotalRentalDaysProvidedByAgent__c + CC_TotalRentalDaysProvidedByDealer__c ) &gt; 20
+&amp;&amp;
+ISPICKVAL(CC_DailyRate__c ,&quot;Regular&quot;) ||
+ISPICKVAL(CC_DailyRate__c ,&quot;Premium&quot;) ||
+ISPICKVAL(CC_DailyRate__c ,&quot;Competitive vehicle&quot;) ||
+ISPICKVAL(CC_DailyRate__c ,&quot;Wagoneer&quot;))
+,
+ISPICKVAL(CC_DailyRate__c ,&quot;Other (special circumstances)&quot;))</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 1</label>
+        <name>Step_4</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>NAFTA_OperationsManager__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <entryCriteria>
+            <formula>CONTAINS(CreatedBy.UserRole.Name,&quot;Special Investigation&quot;)
+&amp;&amp;
+OR
+(((CC_TotalRentalDaysProvidedByAgent__c + CC_TotalRentalDaysProvidedByDealer__c ) &gt; 10
+&amp;&amp;
+ISPICKVAL(CC_DailyRate__c ,&quot;Regular&quot;) ||
+ISPICKVAL(CC_DailyRate__c ,&quot;Premium&quot;) ||
+ISPICKVAL(CC_DailyRate__c ,&quot;Competitive vehicle&quot;) ||
+ISPICKVAL(CC_DailyRate__c ,&quot;Wagoneer&quot;))
+,
+ISPICKVAL(CC_DailyRate__c ,&quot;Other (special circumstances)&quot;))</formula>
+        </entryCriteria>
+        <label>Level 1</label>
+        <name>Step_5</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <description>NAFTA-3 CC-543. Approval process for Rental Car Request for Premium Customers of USA region.</description>
+    <enableMobileDeviceAccess>false</enableMobileDeviceAccess>
+    <entryCriteria>
+        <criteriaItems>
+            <field>CC_RentalCarRequest__c.NAFTA_PremiumVehicleRental__c</field>
+            <operation>equals</operation>
+            <value>True</value>
+        </criteriaItems>
+    </entryCriteria>
+    <finalApprovalActions>
+        <action>
+            <name>CC_Rental_Car_Request_Status_Approved</name>
+            <type>FieldUpdate</type>
+        </action>
+        <action>
+            <name>Update_Rental_Status_Field</name>
+            <type>FieldUpdate</type>
+        </action>
+    </finalApprovalActions>
+    <finalApprovalRecordLock>false</finalApprovalRecordLock>
+    <finalRejectionActions>
+        <action>
+            <name>CC_Rental_Car_Request_Status_Rejected</name>
+            <type>FieldUpdate</type>
+        </action>
+    </finalRejectionActions>
+    <finalRejectionRecordLock>false</finalRejectionRecordLock>
+    <label>Rental Approval For Premium Customers</label>
+    <nextAutomatedApprover>
+        <useApproverFieldOfRecordOwner>false</useApproverFieldOfRecordOwner>
+        <userHierarchyField>Manager</userHierarchyField>
+    </nextAutomatedApprover>
+    <processOrder>5</processOrder>
+    <recallActions>
+        <action>
+            <name>CC_RentalCarRequestStatusRecalled</name>
+            <type>FieldUpdate</type>
+        </action>
+    </recallActions>
+    <recordEditability>AdminOrCurrentApprover</recordEditability>
+    <showApprovalHistory>false</showApprovalHistory>
+</ApprovalProcess>

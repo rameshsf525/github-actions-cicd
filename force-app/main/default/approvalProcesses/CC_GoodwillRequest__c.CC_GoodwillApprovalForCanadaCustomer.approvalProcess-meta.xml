@@ -1,0 +1,383 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ApprovalProcess xmlns="http://soap.sforce.com/2006/04/metadata">
+    <active>true</active>
+    <allowRecall>true</allowRecall>
+    <allowedSubmitters>
+        <submitter>CC_Reporting_Manager</submitter>
+        <type>roleSubordinatesInternal</type>
+    </allowedSubmitters>
+    <approvalPageFields>
+        <field>Name</field>
+        <field>CC_Case__c</field>
+        <field>CC_TotalGoodwillRequested__c</field>
+        <field>NAFTA_PremiumVehicleGoodwill__c</field>
+        <field>NAFTA_AlfaGoodwill__c</field>
+    </approvalPageFields>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <type>userHierarchyField</type>
+            </approver>
+        </assignedApprover>
+        <entryCriteria>
+            <formula>OR(CONTAINS(CreatedBy.UserRole.DeveloperName,&quot;CC_SpecialistJuniorCanada&quot;), CONTAINS(CreatedBy.UserRole.DeveloperName,&quot;NAFTA_SpecialistCanada&quot;)) &amp;&amp;  CC_TotalGoodwillRequested__c &gt; 0</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 1</label>
+        <name>Step_1</name>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <type>userHierarchyField</type>
+            </approver>
+        </assignedApprover>
+        <entryCriteria>
+            <formula>OR(CONTAINS( CreatedBy.UserRole.DeveloperName , &quot;CC_SpecialistSeniorCanada&quot;), CONTAINS( CreatedBy.UserRole.DeveloperName , &quot;CC_Top_Care_Specialist&quot;), CONTAINS( CreatedBy.UserRole.DeveloperName , &quot;Arbitration_Coordinator_Canada&quot;)) &amp;&amp;  CC_TotalGoodwillRequested__c &gt; 500</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 1</label>
+        <name>Step_2</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>CC_ManagerLevel2__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <entryCriteria>
+            <formula>CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;CC_SpecialistSeniorCanada&quot;) &amp;&amp; CC_TotalGoodwillRequested__c &gt; 1500</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 2</label>
+        <name>Step_3</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>CC_ManagerLevel3__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <entryCriteria>
+            <formula>CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;CC_SpecialistSeniorCanada&quot;)  &amp;&amp;  CC_TotalGoodwillRequested__c &gt; 3000</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 3</label>
+        <name>Step_4</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>CC_ManagerLevel4__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <entryCriteria>
+            <formula>CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;CC_SpecialistSeniorCanada&quot;) &amp;&amp; CC_TotalGoodwillRequested__c &gt; 5000</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 4</label>
+        <name>Step_5</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>CC_ManagerLevel5__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <entryCriteria>
+            <formula>CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;CC_SpecialistSeniorCanada&quot;)  &amp;&amp; CC_TotalGoodwillRequested__c &gt; 10000</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 5</label>
+        <name>Step_6</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <type>userHierarchyField</type>
+            </approver>
+        </assignedApprover>
+        <entryCriteria>
+            <formula>(  CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;NAFTA_SupervisorLevel3Canada&quot;) 
+|| CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;CC_Supervisor_English_Agents_Canada&quot;)
+|| CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;CC_Supervisor_Bi_Lingual_Agents_Canada&quot;)
+|| CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;CC_SupervisorLevel4Canada&quot;)
+|| CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;NAFTA_SupervisorLevel2Canada&quot;)
+) &amp;&amp; CC_TotalGoodwillRequested__c &gt; 1500</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 1</label>
+        <name>Step_7</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>CC_ManagerLevel2__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <entryCriteria>
+            <formula>(  CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;NAFTA_SupervisorLevel3Canada&quot;) 
+|| CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;CC_Supervisor_English_Agents_Canada&quot;)
+|| CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;CC_Supervisor_Bi_Lingual_Agents_Canada&quot;)
+|| CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;CC_SupervisorLevel4Canada&quot;)
+|| CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;NAFTA_SupervisorLevel2Canada&quot;)  || CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;CC_Top_Care_Specialist&quot;)) &amp;&amp; CC_TotalGoodwillRequested__c &gt; 3000</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 2</label>
+        <name>Step_8</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>CC_ManagerLevel3__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <entryCriteria>
+            <formula>(  CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;NAFTA_SupervisorLevel3Canada&quot;) 
+|| CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;CC_Supervisor_English_Agents_Canada&quot;)
+||  CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;CC_Supervisor_Bi_Lingual_Agents_Canada&quot;)
+|| CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;CC_SupervisorLevel4Canada&quot;)
+|| CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;NAFTA_SupervisorLevel2Canada&quot;) || CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;CC_Top_Care_Specialist&quot;) 
+ ) &amp;&amp; CC_TotalGoodwillRequested__c &gt; 5000</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 3</label>
+        <name>Step_9</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>CC_ManagerLevel4__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <entryCriteria>
+            <formula>( CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;NAFTA_SupervisorLevel3Canada&quot;) 
+|| CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;CC_Supervisor_English_Agents_Canada&quot;) 
+|| CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;CC_Supervisor_Bi_Lingual_Agents_Canada&quot;)
+|| CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;CC_SupervisorLevel4Canada&quot;)
+|| CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;NAFTA_SupervisorLevel2Canada&quot;) || CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;CC_Top_Care_Specialist&quot;) 
+ ) &amp;&amp; CC_TotalGoodwillRequested__c &gt; 10000</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 4</label>
+        <name>Step_10</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <type>userHierarchyField</type>
+            </approver>
+        </assignedApprover>
+        <entryCriteria>
+            <formula>OR(CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;CC_Operation_Head_Canada&quot;), CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;CC_Top_Care_Manager_CAN&quot;)) &amp;&amp; CC_TotalGoodwillRequested__c &gt; 3000</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 1</label>
+        <name>Step_11</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>CC_ManagerLevel2__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <entryCriteria>
+            <formula>OR(CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;CC_Operation_Head_Canada&quot;), CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;CC_Top_Care_Manager_CAN&quot;), CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;Arbitration_Coordinator_Canada&quot;)) &amp;&amp; CC_TotalGoodwillRequested__c &gt; 5000</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 2</label>
+        <name>Step_12</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>CC_ManagerLevel3__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <entryCriteria>
+            <formula>OR(CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;CC_Operation_Head_Canada&quot;), CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;CC_Top_Care_Manager_CAN&quot;), CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;Arbitration_Coordinator_Canada&quot;)) &amp;&amp; CC_TotalGoodwillRequested__c &gt; 10000</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 3</label>
+        <name>Step_13</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <type>userHierarchyField</type>
+            </approver>
+        </assignedApprover>
+        <entryCriteria>
+            <formula>OR(CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;CC_FCA_Manager_Canada&quot;), CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;Arbitration_Manager_Canada&quot;)) &amp;&amp; CC_TotalGoodwillRequested__c &gt; 5000</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 1</label>
+        <name>Step_14</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>CC_ManagerLevel2__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <entryCriteria>
+            <formula>OR(CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;CC_FCA_Manager_Canada&quot;), CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;Arbitration_Manager_Canada&quot;)) &amp;&amp; CC_TotalGoodwillRequested__c &gt; 10000</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 2</label>
+        <name>Step_15</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <type>userHierarchyField</type>
+            </approver>
+        </assignedApprover>
+        <entryCriteria>
+            <formula>CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;CC_SeniorManagerCanada&quot;) &amp;&amp; CC_TotalGoodwillRequested__c &gt; 10000</formula>
+        </entryCriteria>
+        <label>Level 1</label>
+        <name>Step_16</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <description>CC-544. Approval process for premium as well as non premium canada customers.</description>
+    <enableMobileDeviceAccess>false</enableMobileDeviceAccess>
+    <entryCriteria>
+        <criteriaItems>
+            <field>CC_GoodwillRequest__c.CC_GoodwillRequestStatus__c</field>
+            <operation>equals</operation>
+            <value>Draft</value>
+        </criteriaItems>
+        <criteriaItems>
+            <field>Case.CC_Market__c</field>
+            <operation>equals</operation>
+            <value>Canada</value>
+        </criteriaItems>
+    </entryCriteria>
+    <finalApprovalActions>
+        <action>
+            <name>CC_GoodwillApprovedChecked</name>
+            <type>FieldUpdate</type>
+        </action>
+    </finalApprovalActions>
+    <finalApprovalRecordLock>true</finalApprovalRecordLock>
+    <finalRejectionActions>
+        <action>
+            <name>CC_GoodwillRequestStatustoRejected</name>
+            <type>FieldUpdate</type>
+        </action>
+        <action>
+            <name>CC_RecordTypetoNAFTA</name>
+            <type>FieldUpdate</type>
+        </action>
+    </finalRejectionActions>
+    <finalRejectionRecordLock>false</finalRejectionRecordLock>
+    <initialSubmissionActions>
+        <action>
+            <name>CC_GoodwillRequestStatusSubmitted</name>
+            <type>FieldUpdate</type>
+        </action>
+        <action>
+            <name>CC_NAFTASubmitForApproval</name>
+            <type>FieldUpdate</type>
+        </action>
+        <action>
+            <name>CC_TotalGoodwillApprovedSpecialists</name>
+            <type>FieldUpdate</type>
+        </action>
+    </initialSubmissionActions>
+    <label>Goodwill Approval For Canada Customer</label>
+    <nextAutomatedApprover>
+        <useApproverFieldOfRecordOwner>false</useApproverFieldOfRecordOwner>
+        <userHierarchyField>Manager</userHierarchyField>
+    </nextAutomatedApprover>
+    <processOrder>1</processOrder>
+    <recallActions>
+        <action>
+            <name>CC_GoodwillRequestStatusRecalled</name>
+            <type>FieldUpdate</type>
+        </action>
+    </recallActions>
+    <recordEditability>AdminOrCurrentApprover</recordEditability>
+    <showApprovalHistory>true</showApprovalHistory>
+</ApprovalProcess>

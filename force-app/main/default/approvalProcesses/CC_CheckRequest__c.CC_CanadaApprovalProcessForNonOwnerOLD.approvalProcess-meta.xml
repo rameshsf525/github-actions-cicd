@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ApprovalProcess xmlns="http://soap.sforce.com/2006/04/metadata">
+    <active>false</active>
+    <allowRecall>true</allowRecall>
+    <allowedSubmitters>
+        <submitter>CC_FinanceManagerCanada</submitter>
+        <type>roleSubordinates</type>
+    </allowedSubmitters>
+    <approvalPageFields>
+        <field>Name</field>
+        <field>CC_Case__c</field>
+        <field>CC_CheckAmount__c</field>
+    </approvalPageFields>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>NAFTA_ManagerOfManager__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <description>Assign to Operation Manager(Manager of Manager)</description>
+        <entryCriteria>
+            <formula>OR( 
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Specialist Junior&apos;) 
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;) 
+&amp;&amp; CC_TotalAmount__c &gt; 0 
+&amp;&amp; CC_TotalAmount__c &lt;= 999999 
+), 
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Specialist Senior&apos;) 
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;) 
+&amp;&amp; CC_TotalAmount__c &gt; 0 
+&amp;&amp; CC_TotalAmount__c &lt;= 999999 
+))</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 1</label>
+        <name>Step_1</name>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>NAFTA_ManagerOfManagerOfManager__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <description>Assign to Manager of Manager of Manager</description>
+        <entryCriteria>
+            <formula>OR( 
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Specialist Junior&apos;) 
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;) 
+&amp;&amp; CC_TotalAmount__c &gt; 3000 
+&amp;&amp; CC_TotalAmount__c &lt;= 999999 
+), 
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Specialist Senior&apos;) 
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;) 
+&amp;&amp; CC_TotalAmount__c &gt; 3000  
+&amp;&amp; CC_TotalAmount__c &lt;= 999999 
+))</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 2</label>
+        <name>Step_2</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>CC_ManagerLevel4__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <description>Assign to Manager Level 4</description>
+        <entryCriteria>
+            <formula>OR( 
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Specialist Junior&apos;) 
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;) 
+&amp;&amp; CC_TotalAmount__c &gt; 5000 
+&amp;&amp; CC_TotalAmount__c &lt;= 999999 
+), 
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Specialist Senior&apos;) 
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;) 
+&amp;&amp; CC_TotalAmount__c &gt; 5000 
+&amp;&amp; CC_TotalAmount__c &lt;= 999999 
+))</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 3</label>
+        <name>Step_3</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>CC_ManagerLevel5__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <description>Assign to Last Manager</description>
+        <entryCriteria>
+            <formula>OR( 
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Specialist Junior&apos;) 
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;) 
+&amp;&amp; CC_TotalAmount__c &gt; 10000 
+&amp;&amp; CC_TotalAmount__c &lt;= 999999 
+), 
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Specialist Senior&apos;) 
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;) 
+&amp;&amp; CC_TotalAmount__c &gt; 10000 
+&amp;&amp; CC_TotalAmount__c &lt;= 999999 
+))</formula>
+        </entryCriteria>
+        <label>Level 4</label>
+        <name>Step_4</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <description>This approval process is made for the Canada region pertaining to Approvals created for anyone other than the owner. Details in CC-544.</description>
+    <enableMobileDeviceAccess>false</enableMobileDeviceAccess>
+    <entryCriteria>
+        <criteriaItems>
+            <field>CC_CheckRequest__c.NAFTA_CaseMarket__c</field>
+            <operation>equals</operation>
+            <value>Canada</value>
+        </criteriaItems>
+        <criteriaItems>
+            <field>CC_CheckRequest__c.CC_Status__c</field>
+            <operation>equals</operation>
+            <value>Submitted</value>
+        </criteriaItems>
+    </entryCriteria>
+    <finalApprovalActions>
+        <action>
+            <name>CC_CheckRequestStatusApprovedNonOwner</name>
+            <type>FieldUpdate</type>
+        </action>
+    </finalApprovalActions>
+    <finalApprovalRecordLock>false</finalApprovalRecordLock>
+    <finalRejectionActions>
+        <action>
+            <name>CC_CheckRequestStatusRejectedNonOwner</name>
+            <type>FieldUpdate</type>
+        </action>
+    </finalRejectionActions>
+    <finalRejectionRecordLock>false</finalRejectionRecordLock>
+    <label>Canada Approval Process For Non OwnerOLD</label>
+    <nextAutomatedApprover>
+        <useApproverFieldOfRecordOwner>false</useApproverFieldOfRecordOwner>
+        <userHierarchyField>Manager</userHierarchyField>
+    </nextAutomatedApprover>
+    <processOrder>1</processOrder>
+    <recallActions>
+        <action>
+            <name>CC_CheckRequestRequestStatusRecalled</name>
+            <type>FieldUpdate</type>
+        </action>
+    </recallActions>
+    <recordEditability>AdminOrCurrentApprover</recordEditability>
+    <showApprovalHistory>false</showApprovalHistory>
+</ApprovalProcess>

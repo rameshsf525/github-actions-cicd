@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Responsible__c</fullName>
+    <externalId>false</externalId>
+    <label>Responsible</label>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>SFDC</fullName>
+                <default>false</default>
+                <label>SFDC</label>
+            </value>
+            <value>
+                <fullName>Chrysler</fullName>
+                <default>false</default>
+                <label>Chrysler</label>
+            </value>
+            <value>
+                <fullName>SFDC + Chrysler</fullName>
+                <default>false</default>
+                <label>SFDC + Chrysler</label>
+            </value>
+            <value>
+                <fullName>SI</fullName>
+                <default>false</default>
+                <label>SI</label>
+            </value>
+            <value>
+                <fullName>DFX</fullName>
+                <default>false</default>
+                <label>DFX</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

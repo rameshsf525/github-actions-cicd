@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Calc_wiAdvisor_Status__c</fullName>
+    <description>&quot;CASE(
+ (Status == &apos;Live&apos; &amp; Go_Live_Date &gt; Opt_Out_Date), &apos;1 Enrolled and Live&apos;,
+ (Consent_Form == &apos;Yes&apos; &amp; Status == &apos;Live&apos; &amp; wiADVISOR_Consent_Date &gt; Opt_Out_Date), &apos;2 Enrolled&apos;,
+ (Opt_Out_Date != &apos;&apos;), &apos;3 Opt Out&apos;,
+ true, &quot;&quot;4 No Action&quot;&quot;
+)&quot;</description>
+    <externalId>false</externalId>
+    <label>wiAdvisor Status</label>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>false</trackHistory>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Complete</fullName>
+                <default>false</default>
+                <label>Complete</label>
+            </value>
+            <value>
+                <fullName>Incomplete</fullName>
+                <default>false</default>
+                <label>Incomplete</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

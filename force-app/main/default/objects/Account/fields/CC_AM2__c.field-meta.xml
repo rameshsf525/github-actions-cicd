@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>CC_AM2__c</fullName>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <description>new filed created for nclp 4 requirement</description>
+    <externalId>false</externalId>
+    <label>Area Manager 2</label>
+    <referenceTo>User</referenceTo>
+    <relationshipName>Accounts4</relationshipName>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>false</trackHistory>
+    <type>Lookup</type>
+</CustomField>
