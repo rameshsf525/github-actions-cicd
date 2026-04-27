@@ -1,0 +1,957 @@
+name: Apex Test Validation
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+    branches:
+      - main
+      - develop
+      - release/*
+      - preint/*
+      - qa
+      - sit
+      - uat
+
+env:
+  TEST_MINUTES_TIMEOUT: 5
+
+jobs:
+  apex-test-validation:
+    runs-on: concordia-linux-cpu2-ram7gi
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get PR details and changed files
+        id: pr_details
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const prBody = context.payload.pull_request.body || '';
+            
+            // Get changed files in the PR
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+              per_page: 100
+            });
+            
+            const changedFiles = files.map(f => f.filename);
+            
+            // Filter Apex classes (excluding test classes) and extract class names
+            const apexClassFiles = changedFiles.filter(f => 
+              f.endsWith('.cls') && 
+              !f.toLowerCase().includes('test')
+            );
+            
+            // Extract just the class names (without path and extension)
+            const apexClassNames = apexClassFiles.map(f => {
+              const parts = f.split('/');
+              const fileName = parts[parts.length - 1];
+              return fileName.replace('.cls', '');
+            });
+            
+            // Filter Apex test classes from committed files
+            const committedTestClasses = changedFiles.filter(f => 
+              f.endsWith('.cls') && 
+              f.toLowerCase().includes('test')
+            ).map(f => {
+              // Extract class name from path
+              const parts = f.split('/');
+              const fileName = parts[parts.length - 1];
+              return fileName.replace('.cls', '');
+            });
+            
+            // Parse Source_Org from PR body (normalize to lowercase)
+            const sourceOrgMatch = prBody.match(/Source_Org::(\S+)/i);
+            const sourceOrg = sourceOrgMatch ? sourceOrgMatch[1].trim().toLowerCase() : '';
+            
+            // Parse Apex::Test:: from PR body
+            const testClassMatch = prBody.match(/Apex::Test::([^\n\r]+)/i);
+            let mentionedTestClasses = [];
+            if (testClassMatch) {
+              mentionedTestClasses = testClassMatch[1]
+                .split(',')
+                .map(c => c.trim())
+                .filter(c => c.length > 0);
+            }
+            
+            // Combine committed and mentioned test classes
+            const allTestClasses = [...new Set([...committedTestClasses, ...mentionedTestClasses])];
+            
+            console.log('Changed Apex Class Files:', apexClassFiles);
+            console.log('Changed Apex Class Names:', apexClassNames);
+            console.log('Committed Test Classes:', committedTestClasses);
+            console.log('Mentioned Test Classes:', mentionedTestClasses);
+            console.log('All Test Classes:', allTestClasses);
+            console.log('Source Org:', sourceOrg);
+            
+            core.setOutput('apex_classes', JSON.stringify(apexClassFiles));
+            core.setOutput('apex_class_names', JSON.stringify(apexClassNames));
+            core.setOutput('committed_test_classes', JSON.stringify(committedTestClasses));
+            core.setOutput('mentioned_test_classes', JSON.stringify(mentionedTestClasses));
+            core.setOutput('all_test_classes', JSON.stringify(allTestClasses));
+            core.setOutput('source_org', sourceOrg);
+            core.setOutput('has_apex_changes', apexClassNames.length > 0);
+            core.setOutput('pr_number', prNumber);
+
+      - name: Check for Apex changes
+        id: check_apex
+        run: |
+          HAS_APEX_CHANGES="${{ steps.pr_details.outputs.has_apex_changes }}"
+          if [ "$HAS_APEX_CHANGES" != "true" ]; then
+            echo "No Apex class changes detected in this PR. Skipping test validation."
+            echo "skip_validation=true" >> $GITHUB_OUTPUT
+          else
+            echo "Apex class changes detected. Proceeding with validation."
+            echo "skip_validation=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Validate Source Org is mentioned
+        if: steps.check_apex.outputs.skip_validation == 'false'
+        run: |
+          SOURCE_ORG="${{ steps.pr_details.outputs.source_org }}"
+          if [ -z "$SOURCE_ORG" ]; then
+            echo "::error::No source org is mentioned in the PR body"
+            echo ""
+            echo "=========================================="
+            echo "❌ VALIDATION FAILED"
+            echo "=========================================="
+            echo ""
+            echo "Please add the source org in your PR body using the following format:"
+            echo ""
+            echo "  Source_Org::YourOrgAlias"
+            echo ""
+            echo "Example:"
+            echo "  Source_Org::dev1"
+            echo ""
+            exit 1
+          fi
+          echo "✅ Source Org found: $SOURCE_ORG"
+
+      - name: Validate Test Classes are provided
+        if: steps.check_apex.outputs.skip_validation == 'false'
+        run: |
+          ALL_TEST_CLASSES='${{ steps.pr_details.outputs.all_test_classes }}'
+          COMMITTED_TEST_CLASSES='${{ steps.pr_details.outputs.committed_test_classes }}'
+          MENTIONED_TEST_CLASSES='${{ steps.pr_details.outputs.mentioned_test_classes }}'
+          
+          # Check if all_test_classes array is empty
+          TEST_COUNT=$(echo "$ALL_TEST_CLASSES" | jq '. | length')
+          
+          if [ "$TEST_COUNT" -eq 0 ]; then
+            echo "::error::Neither related test classes are committed, Nor mentioned in the PR body"
+            echo ""
+            echo "=========================================="
+            echo "❌ VALIDATION FAILED"
+            echo "=========================================="
+            echo ""
+            echo "Apex classes were modified but no test classes were found."
+            echo ""
+            echo "Please either:"
+            echo "  1. Commit the related test classes with your changes"
+            echo "  2. Mention the test class names in your PR body using the following format:"
+            echo ""
+            echo "     Apex::Test::TestClassName1, TestClassName2, TestClassName3"
+            echo ""
+            exit 1
+          fi
+          
+          echo "✅ Test classes found:"
+          echo "   Committed: $COMMITTED_TEST_CLASSES"
+          echo "   Mentioned: $MENTIONED_TEST_CLASSES"
+
+      - name: Setup Node.js
+        if: steps.check_apex.outputs.skip_validation == 'false'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Salesforce CLI
+        if: steps.check_apex.outputs.skip_validation == 'false'
+        run: |
+          npm install -g @salesforce/cli@latest
+          sf version
+
+      - name: Authenticate to Salesforce Org
+        if: steps.check_apex.outputs.skip_validation == 'false'
+        run: |
+          SOURCE_ORG="${{ steps.pr_details.outputs.source_org }}"
+          echo "Authenticating to org: $SOURCE_ORG"
+          
+          # Convert to uppercase for secret lookup
+          ORG_UPPER=$(echo "$SOURCE_ORG" | tr '[:lower:]' '[:upper:]')
+          
+          # Get credentials based on org
+          case "$ORG_UPPER" in
+            "GHPRELEASE")
+              USERNAME="${USERNAME_dev1}"
+              INSTANCE_URL="${INSTANCE_URL_dev1}"
+              CONSUMER_KEY="${CONSUMER_KEY_dev1}"
+              ;;
+            "GHPDEVINT")
+              USERNAME="${USERNAME_dev2}"
+              INSTANCE_URL="${INSTANCE_URL_dev2}"
+              CONSUMER_KEY="${CONSUMER_KEY_dev2}"
+              ;;
+              "ART5POC")
+              USERNAME="${USERNAME_qa}"
+              INSTANCE_URL="${INSTANCE_URL_qa}"
+              CONSUMER_KEY="${CONSUMER_KEY_qa}"
+              ;;
+            "QA")
+              USERNAME="${USERNAME_qa1}"
+              INSTANCE_URL="${INSTANCE_URL_qa1}"
+              CONSUMER_KEY="${CONSUMER_KEY_qa1}"
+              ;;
+            "UAT")
+              USERNAME="${USERNAME_UAT}"
+              INSTANCE_URL="${INSTANCE_URL_UAT}"
+              CONSUMER_KEY="${CONSUMER_KEY_UAT}"
+              ;;
+            "PROD")
+              USERNAME="${USERNAME_PROD}"
+              INSTANCE_URL="${INSTANCE_URL_PROD}"
+              CONSUMER_KEY="${CONSUMER_KEY_PROD}"
+              ;;
+            *)
+              echo "::error::Unknown org: $SOURCE_ORG"
+              echo "Available orgs: dev1, dev2, QA, UAT, PROD"
+              exit 1
+              ;;
+          esac
+          
+          # Debug output (mask sensitive parts)
+          echo "=========================================="
+          echo "DEBUG INFO"
+          echo "=========================================="
+          echo "Username: $USERNAME"
+          echo "Instance URL: $INSTANCE_URL"
+          echo "Consumer Key (first 10 chars): ${CONSUMER_KEY:0:10}..."
+          echo "Key file exists: $(test -f ${GITHUB_WORKSPACE}/assets/devops/server.key && echo 'YES' || echo 'NO')"
+          echo "Key file size: $(wc -c < ${GITHUB_WORKSPACE}/assets/devops/server.key) bytes"
+          echo "Key file header: $(head -1 ${GITHUB_WORKSPACE}/assets/devops/server.key)"
+          echo "=========================================="
+          
+          # Validate required credentials
+          if [ -z "$USERNAME" ] || [ -z "$INSTANCE_URL" ] || [ -z "$CONSUMER_KEY" ]; then
+            echo "::error::Missing credentials for org: $SOURCE_ORG"
+            echo "Please ensure USERNAME, INSTANCE_URL, and CONSUMER_KEY secrets are configured."
+            exit 1
+          fi
+          
+          # Verify server key exists and is valid
+          if [ ! -f "${GITHUB_WORKSPACE}/assets/devops/server.key" ]; then
+            echo "::error::Server key file not found at assets/devops/server.key"
+            exit 1
+          fi
+          
+          # Validate key format
+          if ! openssl rsa -in "${GITHUB_WORKSPACE}/assets/devops/server.key" -check -noout 2>/dev/null; then
+            echo "::error::Invalid RSA private key format"
+            exit 1
+          fi
+          echo "✅ RSA key validation passed"
+          
+          # Authenticate using JWT with verbose output
+          SF_LOG_LEVEL=debug sf auth jwt grant \
+            --instance-url "$INSTANCE_URL" \
+            --client-id "$CONSUMER_KEY" \
+            --jwt-key-file "${GITHUB_WORKSPACE}/assets/devops/server.key" \
+            --username "$USERNAME" \
+            --alias "$SOURCE_ORG" \
+            --set-default
+          
+          echo "✅ Successfully authenticated to $SOURCE_ORG as $USERNAME"
+        env:
+          # ART5POC
+          USERNAME_ART5POC: ${{ secrets.SF_USERNAME_ART5POC }}
+          INSTANCE_URL_ART5POC: ${{ secrets.SF_INSTANCE_URL_ART5POC }}
+          CONSUMER_KEY_ART5POC: ${{ secrets.SF_CONSUMER_KEY_ART5POC }}
+          
+
+      - name: Run Apex Tests
+        if: steps.check_apex.outputs.skip_validation == 'false'
+        id: run_tests
+        run: |
+          SOURCE_ORG="${{ steps.pr_details.outputs.source_org }}"
+          ALL_TEST_CLASSES='${{ steps.pr_details.outputs.all_test_classes }}'
+          APEX_CLASS_NAMES='${{ steps.pr_details.outputs.apex_class_names }}'
+          
+          # Build --class-names parameters (one for each test class, like Copado does)
+          TEST_CLASS_PARAMS=$(echo "$ALL_TEST_CLASSES" | jq -r '.[] | "--class-names \(.)"' | tr '\n' ' ')
+          
+          echo "=========================================="
+          echo "🚀 RUNNING APEX TESTS"
+          echo "=========================================="
+          echo ""
+          echo "Target Org: $SOURCE_ORG"
+          echo "Test Classes: $(echo "$ALL_TEST_CLASSES" | jq -r 'join(", ")')"
+          echo "Changed Apex Classes: $(echo "$APEX_CLASS_NAMES" | jq -r 'join(", ")')"
+          echo "Timeout: ${{ env.TEST_MINUTES_TIMEOUT }} minutes"
+          echo ""
+          
+          # Create output directory
+          mkdir -p ./test-results
+          
+          # Run tests with retry logic (similar to Copado's NUMBER_OF_RUN_APEX_TESTS_RETRIES)
+          MAX_RETRIES=10
+          RETRY_COUNT=0
+          TEST_SUCCESS=false
+          
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$TEST_SUCCESS" = false ]; do
+            echo "Attempt $((RETRY_COUNT + 1)) of $MAX_RETRIES"
+            
+            # Execute the test command (matching Copado's format)
+            set +e
+            TEST_OUTPUT=$(sf apex run test \
+              --target-org "$SOURCE_ORG" \
+              $TEST_CLASS_PARAMS \
+              --result-format json \
+              --detailed-coverage \
+              --code-coverage \
+              --wait ${{ env.TEST_MINUTES_TIMEOUT }} 2>&1)
+            TEST_EXIT_CODE=$?
+            set -e
+            
+            # Check for timeout errors (ETIMEDOUT)
+            if echo "$TEST_OUTPUT" | grep -q "ETIMEDOUT"; then
+              echo "⚠️ Connection timeout occurred. Retrying..."
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+              sleep 5
+              continue
+            fi
+            
+            # Save the output
+            echo "$TEST_OUTPUT" > ./test-results/test-result.json
+            TEST_SUCCESS=true
+          done
+          
+          if [ "$TEST_SUCCESS" = false ]; then
+            echo "::error::Failed to run tests after $MAX_RETRIES attempts due to timeout errors"
+            exit 1
+          fi
+          
+          # Validate test results file exists and is valid JSON
+          if [ -f "./test-results/test-result.json" ]; then
+            if jq empty ./test-results/test-result.json 2>/dev/null; then
+              echo "test_results_exist=true" >> $GITHUB_OUTPUT
+            else
+              echo "::error::Test results file is not valid JSON"
+              cat ./test-results/test-result.json
+              exit 1
+            fi
+          else
+            echo "::error::Failed to retrieve test results"
+            exit 1
+          fi
+
+      - name: Analyze Test Results
+        if: steps.check_apex.outputs.skip_validation == 'false'
+        id: analyze_results
+        run: |
+          echo ""
+          echo "=========================================="
+          echo "📊 APEX TEST RESULTS ANALYSIS"
+          echo "=========================================="
+          echo ""
+          
+          # Get the list of changed apex class names
+          APEX_CLASS_NAMES='${{ steps.pr_details.outputs.apex_class_names }}'
+          ALL_TEST_CLASSES='${{ steps.pr_details.outputs.all_test_classes }}'
+          
+          echo "Changed Apex Classes in PR: $(echo "$APEX_CLASS_NAMES" | jq -r 'join(", ")')"
+          echo "Test Classes: $(echo "$ALL_TEST_CLASSES" | jq -r 'join(", ")')"
+          echo ""
+          
+          # Read test results
+          TEST_RESULTS=$(cat ./test-results/test-result.json)
+          
+          # Handle both direct response and nested response formats
+          if echo "$TEST_RESULTS" | jq -e '.result' > /dev/null 2>&1; then
+            RESULT_DATA=$(echo "$TEST_RESULTS" | jq '.result')
+          else
+            RESULT_DATA="$TEST_RESULTS"
+          fi
+          
+          # Extract test summary
+          OUTCOME=$(echo "$RESULT_DATA" | jq -r '.summary.outcome // "Unknown"')
+          TESTS_RAN=$(echo "$RESULT_DATA" | jq -r '.summary.testsRan // 0')
+          PASSING=$(echo "$RESULT_DATA" | jq -r '.summary.passing // 0')
+          FAILING=$(echo "$RESULT_DATA" | jq -r '.summary.failing // 0')
+          SKIPPED=$(echo "$RESULT_DATA" | jq -r '.summary.skipped // 0')
+          TEST_RUN_ID=$(echo "$RESULT_DATA" | jq -r '.summary.testRunId // "N/A"')
+          
+          # Remove username from output for security
+          RESULT_DATA_SANITIZED=$(echo "$RESULT_DATA" | jq 'del(.summary.username)')
+          
+          echo "Test Run ID: $TEST_RUN_ID"
+          echo "Test Outcome: $OUTCOME"
+          echo "Tests Ran: $TESTS_RAN"
+          echo "Passing: $PASSING"
+          echo "Failing: $FAILING"
+          echo "Skipped: $SKIPPED"
+          echo ""
+          
+          # Track validation status
+          VALIDATION_PASSED=true
+          FAILURE_REASONS=""
+          
+          # ============================================
+          # FILTER TEST METHODS FOR CHANGED CLASSES ONLY
+          # ============================================
+          echo "=========================================="
+          echo "🧪 TEST METHODS STATUS (Changed Classes Only)"
+          echo "=========================================="
+          echo ""
+          
+          # Get test methods that belong to test classes we ran
+          # Filter for only the test classes specified in PR
+          FILTERED_TESTS=$(echo "$RESULT_DATA" | jq --argjson testClasses "$ALL_TEST_CLASSES" '
+            .tests // [] | 
+            map(select(
+              (.ApexClass.Name // .apexClass.name // "") as $className |
+              ($testClasses | map(ascii_downcase) | index($className | ascii_downcase)) != null
+            ))
+          ')
+          
+          FILTERED_FAILING=$(echo "$FILTERED_TESTS" | jq '[.[] | select(.Outcome == "Fail" or .outcome == "Fail")] | length')
+          FILTERED_PASSING=$(echo "$FILTERED_TESTS" | jq '[.[] | select(.Outcome == "Pass" or .outcome == "Pass")] | length')
+          FILTERED_TOTAL=$(echo "$FILTERED_TESTS" | jq 'length')
+          
+          echo "Test Methods from specified test classes:"
+          echo "  Total: $FILTERED_TOTAL"
+          echo "  Passing: $FILTERED_PASSING"
+          echo "  Failing: $FILTERED_FAILING"
+          echo ""
+          
+          # Check for failed methods in specified test classes
+          if [ "$FILTERED_FAILING" -gt 0 ]; then
+            VALIDATION_PASSED=false
+            FAILURE_REASONS="${FAILURE_REASONS}\n- $FILTERED_FAILING test method(s) failed"
+            
+            echo "❌ FAILED TEST METHODS:"
+            echo ""
+            echo "$FILTERED_TESTS" | jq -r '
+              .[] | 
+              select(.Outcome == "Fail" or .outcome == "Fail") | 
+              "  Class: \(.ApexClass.Name // .apexClass.name // "Unknown")\n    Method: \(.MethodName // .methodName // "Unknown")\n    Message: \(.Message // .message // "No message")\n    Stack Trace: \(.StackTrace // .stackTrace // "No stack trace")\n"
+            ' 2>/dev/null || echo "  Could not parse failed test details"
+            echo ""
+          else
+            echo "✅ All test methods passed!"
+            echo ""
+          fi
+          
+          # ============================================
+          # FILTER COVERAGE FOR CHANGED CLASSES ONLY
+          # ============================================
+          echo "=========================================="
+          echo "📈 CODE COVERAGE (Changed Classes Only)"
+          echo "=========================================="
+          echo ""
+          
+          # Extract coverage data and filter for changed classes only
+          # Handle different coverage structures from SF CLI
+          COVERAGE_DATA=$(echo "$RESULT_DATA" | jq '
+            if .coverage.coverage then
+              .coverage.coverage
+            elif .coverage then
+              .coverage
+            else
+              []
+            end
+          ')
+          
+          # Filter coverage to only include changed apex classes
+          FILTERED_COVERAGE=$(echo "$COVERAGE_DATA" | jq --argjson changedClasses "$APEX_CLASS_NAMES" '
+            map(select(
+              (.name // .Name // "") as $className |
+              ($changedClasses | map(ascii_downcase) | index($className | ascii_downcase)) != null
+            ))
+          ')
+          
+          # Calculate average coverage for changed classes only
+          CHANGED_CLASS_COUNT=$(echo "$FILTERED_COVERAGE" | jq 'length')
+          
+          if [ "$CHANGED_CLASS_COUNT" -gt 0 ]; then
+            # Calculate total and average coverage using jq (no bc needed)
+            TOTAL_COVERAGE=$(echo "$FILTERED_COVERAGE" | jq '[.[].coveredPercent // .[].CoveredPercent // 0] | add')
+            AVG_COVERAGE=$(echo "$FILTERED_COVERAGE" | jq --argjson total "$TOTAL_COVERAGE" --argjson count "$CHANGED_CLASS_COUNT" '$total / $count | . * 100 | floor | . / 100')
+            AVG_COVERAGE_INT=$(echo "$FILTERED_COVERAGE" | jq --argjson total "$TOTAL_COVERAGE" --argjson count "$CHANGED_CLASS_COUNT" '$total / $count | floor')
+            
+            echo "Changed Classes Coverage Summary:"
+            echo "  Classes Analyzed: $CHANGED_CLASS_COUNT"
+            echo "  Average Coverage: ${AVG_COVERAGE}%"
+            echo ""
+            echo "Coverage by Changed Class:"
+            echo ""
+            
+            # Print coverage for each changed class
+            echo "$FILTERED_COVERAGE" | jq -r '
+              .[] | 
+              "  \(.name // .Name): \(.coveredPercent // .CoveredPercent // 0)%"
+            ' 2>/dev/null || echo "  Could not parse coverage details"
+            echo ""
+            
+            # ============================================
+            # CHECK INDIVIDUAL CLASS COVERAGE (NEW LOGIC)
+            # ============================================
+            # Get classes below 86% threshold
+            CLASSES_BELOW_86=$(echo "$FILTERED_COVERAGE" | jq '[.[] | select((.coveredPercent // .CoveredPercent // 0) < 86)]')
+            BELOW_86_COUNT=$(echo "$CLASSES_BELOW_86" | jq 'length')
+            
+            # Get list of class names below threshold for output
+            CLASSES_BELOW_86_NAMES=$(echo "$CLASSES_BELOW_86" | jq -r '[.[] | "\(.name // .Name) (\(.coveredPercent // .CoveredPercent // 0)%)"] | join(", ")')
+            
+            if [ "$BELOW_86_COUNT" -gt 0 ]; then
+              echo "=========================================="
+              echo "❌ INDIVIDUAL CLASS COVERAGE FAILURE"
+              echo "=========================================="
+              echo ""
+              echo "The following $BELOW_86_COUNT class(es) have coverage below the required 86%:"
+              echo ""
+              echo "$CLASSES_BELOW_86" | jq -r '
+                .[] | 
+                "  ❌ \(.name // .Name): \(.coveredPercent // .CoveredPercent // 0)% (required: 86%)"
+              '
+              echo ""
+              
+              VALIDATION_PASSED=false
+              FAILURE_REASONS="${FAILURE_REASONS}\n- Individual class coverage failure: $BELOW_86_COUNT class(es) below 86%: $CLASSES_BELOW_86_NAMES"
+              
+              # Set output for classes below threshold
+              echo "classes_below_threshold=$CLASSES_BELOW_86_NAMES" >> $GITHUB_OUTPUT
+              echo "classes_below_threshold_count=$BELOW_86_COUNT" >> $GITHUB_OUTPUT
+            else
+              echo "✅ All individual classes meet the 86% coverage requirement"
+              echo ""
+              echo "classes_below_threshold=" >> $GITHUB_OUTPUT
+              echo "classes_below_threshold_count=0" >> $GITHUB_OUTPUT
+            fi
+            
+            # ============================================
+            # CHECK AVERAGE COVERAGE
+            # ============================================
+            if [ "$AVG_COVERAGE_INT" -lt 86 ]; then
+              VALIDATION_PASSED=false
+              FAILURE_REASONS="${FAILURE_REASONS}\n- Average code coverage for changed classes (${AVG_COVERAGE}%) is below the required 86%"
+              
+              echo "=========================================="
+              echo "❌ AVERAGE COVERAGE FAILURE"
+              echo "=========================================="
+              echo ""
+              echo "   Current Average: ${AVG_COVERAGE}%"
+              echo "   Required: 86%"
+              echo ""
+            else
+              echo "✅ Average code coverage meets requirement (${AVG_COVERAGE}% >= 86%)"
+              echo ""
+            fi
+          else
+            echo "⚠️  No coverage data found for changed classes."
+            echo "    This may happen if the changed classes are not covered by the specified test classes."
+            echo ""
+            echo "    Changed classes: $(echo "$APEX_CLASS_NAMES" | jq -r 'join(", ")')"
+            echo ""
+            
+            # Check if any coverage data exists at all
+            TOTAL_COVERAGE_RECORDS=$(echo "$COVERAGE_DATA" | jq 'length')
+            if [ "$TOTAL_COVERAGE_RECORDS" -gt 0 ]; then
+              echo "    Available coverage data is for these classes:"
+              echo "$COVERAGE_DATA" | jq -r '.[0:10] | .[] | "      - \(.name // .Name)"' 2>/dev/null
+              if [ "$TOTAL_COVERAGE_RECORDS" -gt 10 ]; then
+                echo "      ... and $((TOTAL_COVERAGE_RECORDS - 10)) more"
+              fi
+            fi
+            echo ""
+            
+            VALIDATION_PASSED=false
+            FAILURE_REASONS="${FAILURE_REASONS}\n- No coverage data found for changed classes"
+            AVG_COVERAGE="N/A"
+            AVG_COVERAGE_INT=0
+            echo "classes_below_threshold=" >> $GITHUB_OUTPUT
+            echo "classes_below_threshold_count=0" >> $GITHUB_OUTPUT
+          fi
+          
+          # Save sanitized and filtered results
+          echo "$RESULT_DATA_SANITIZED" > ./test-results/apex-tests-output.json
+          
+          # Create filtered output with only changed classes
+          echo "$RESULT_DATA_SANITIZED" | jq --argjson changedClasses "$APEX_CLASS_NAMES" --argjson testClasses "$ALL_TEST_CLASSES" '
+            # Filter tests to only specified test classes
+            .tests = ([.tests[]? | select(
+              (.ApexClass.Name // .apexClass.name // "") as $className |
+              ($testClasses | map(ascii_downcase) | index($className | ascii_downcase)) != null
+            )] // []) |
+            # Filter coverage to only changed classes
+            if .coverage.coverage then
+              .coverage.coverage = ([.coverage.coverage[]? | select(
+                (.name // .Name // "") as $className |
+                ($changedClasses | map(ascii_downcase) | index($className | ascii_downcase)) != null
+              )] // [])
+            elif .coverage then
+              .coverage = ([.coverage[]? | select(
+                (.name // .Name // "") as $className |
+                ($changedClasses | map(ascii_downcase) | index($className | ascii_downcase)) != null
+              )] // [])
+            else
+              .
+            end |
+            # Remove unnecessary data
+            del(.coverage.coverage[]?.lines) |
+            del(.coverage.summary) |
+            del(.coverage.records)
+          ' > ./test-results/apex-tests-filtered-output.json 2>/dev/null || true
+          
+          # Set outputs for PR comment
+          echo "validation_passed=$VALIDATION_PASSED" >> $GITHUB_OUTPUT
+          echo "tests_ran=$FILTERED_TOTAL" >> $GITHUB_OUTPUT
+          echo "tests_passing=$FILTERED_PASSING" >> $GITHUB_OUTPUT
+          echo "tests_failing=$FILTERED_FAILING" >> $GITHUB_OUTPUT
+          echo "avg_coverage=$AVG_COVERAGE" >> $GITHUB_OUTPUT
+          echo "avg_coverage_int=$AVG_COVERAGE_INT" >> $GITHUB_OUTPUT
+          
+          # Final validation result
+          echo "=========================================="
+          if [ "$VALIDATION_PASSED" = true ]; then
+            echo "✅ VALIDATION PASSED"
+            echo "=========================================="
+            echo ""
+            echo "All requirements met:"
+            echo "  ✅ All test methods passed"
+            echo "  ✅ All individual classes have >= 86% coverage"
+            echo "  ✅ Average code coverage >= 86%"
+            echo "validation_status=passed" >> $GITHUB_OUTPUT
+          else
+            echo "❌ VALIDATION FAILED"
+            echo "=========================================="
+            echo ""
+            echo "Failure reasons:"
+            echo -e "$FAILURE_REASONS"
+            echo ""
+            echo "Requirements:"
+            echo "  - All test methods must pass"
+            echo "  - Each individual class must have >= 86% coverage"
+            echo "  - Average coverage of all changed classes must be >= 86%"
+            echo ""
+            echo "Please fix the failing tests and/or improve code coverage before merging."
+            echo "validation_status=failed" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Post Results to PR
+        if: steps.check_apex.outputs.skip_validation == 'false' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            
+            const prNumber = ${{ steps.pr_details.outputs.pr_number }};
+            const apexClassNames = ${{ steps.pr_details.outputs.apex_class_names }};
+            const allTestClasses = ${{ steps.pr_details.outputs.all_test_classes }};
+            const sourceOrg = '${{ steps.pr_details.outputs.source_org }}';
+            const classesBelowThreshold = '${{ steps.analyze_results.outputs.classes_below_threshold }}';
+            const classesBelowThresholdCount = parseInt('${{ steps.analyze_results.outputs.classes_below_threshold_count }}' || '0');
+            
+            // Read test results if available
+            let testsRan = 0;
+            let testsPassing = 0;
+            let testsFailing = 0;
+            let avgCoverage = 'N/A';
+            let validationPassed = false;
+            let coverageDetails = [];
+            let failedTests = [];
+            
+            try {
+              if (fs.existsSync('./test-results/apex-tests-filtered-output.json')) {
+                const resultData = JSON.parse(fs.readFileSync('./test-results/apex-tests-filtered-output.json', 'utf8'));
+                
+                const tests = resultData.tests || [];
+                testsRan = tests.length;
+                testsPassing = tests.filter(t => (t.Outcome || t.outcome) === 'Pass').length;
+                testsFailing = tests.filter(t => (t.Outcome || t.outcome) === 'Fail').length;
+                
+                // Get failed test details
+                failedTests = tests
+                  .filter(t => (t.Outcome || t.outcome) === 'Fail')
+                  .map(t => ({
+                    className: t.ApexClass?.Name || t.apexClass?.name || 'Unknown',
+                    methodName: t.MethodName || t.methodName || 'Unknown',
+                    message: t.Message || t.message || 'No message'
+                  }));
+                
+                // Get coverage data
+                const coverage = resultData.coverage?.coverage || resultData.coverage || [];
+                if (coverage.length > 0) {
+                  const totalCov = coverage.reduce((sum, c) => sum + (c.coveredPercent || c.CoveredPercent || 0), 0);
+                  avgCoverage = (totalCov / coverage.length).toFixed(2);
+                  
+                  coverageDetails = coverage.map(c => ({
+                    name: c.name || c.Name,
+                    percent: c.coveredPercent || c.CoveredPercent || 0
+                  }));
+                }
+                
+                // Validation passes only if:
+                // 1. No failing tests
+                // 2. All individual classes have >= 86% coverage
+                // 3. Average coverage >= 86%
+                const allClassesAboveThreshold = coverageDetails.every(c => c.percent >= 86);
+                validationPassed = testsFailing === 0 && allClassesAboveThreshold && parseFloat(avgCoverage) >= 86;
+              }
+            } catch (e) {
+              console.log('Error reading test results:', e.message);
+            }
+            
+            // Build the comment body
+            const statusIcon = validationPassed ? '✅' : '❌';
+            const statusText = validationPassed ? 'Validation Passed' : 'Validation Failed';
+            
+            let commentBody = `## ${statusIcon} Apex Test Results\n\n`;
+            commentBody += `**Source Org:** \`${sourceOrg.toUpperCase()}\`\n\n`;
+            
+            commentBody += `### Changed Classes\n`;
+            commentBody += apexClassNames.length > 0 ? apexClassNames.map(c => `\`${c}\``).join(', ') : '_None_';
+            commentBody += `\n\n`;
+            
+            commentBody += `### Test Classes\n`;
+            commentBody += allTestClasses.length > 0 ? allTestClasses.map(c => `\`${c}\``).join(', ') : '_None_';
+            commentBody += `\n\n`;
+            
+            commentBody += `### ${statusIcon} ${statusText}\n\n`;
+            
+            commentBody += `| Metric | Value |\n`;
+            commentBody += `|--------|-------|\n`;
+            commentBody += `| Test Methods Ran | ${testsRan} |\n`;
+            commentBody += `| Passing | ${testsPassing} |\n`;
+            commentBody += `| Failing | ${testsFailing} |\n`;
+            commentBody += `| Avg Coverage (Changed Classes) | ${avgCoverage}% |\n`;
+            commentBody += `| Required Coverage (Individual & Avg) | 86% |\n\n`;
+            
+            // Coverage by class with individual threshold check
+            if (coverageDetails.length > 0) {
+              commentBody += `### Coverage by Changed Class\n\n`;
+              commentBody += `> **Note:** Each individual class must have ≥ 86% coverage AND the average must be ≥ 86%\n\n`;
+              commentBody += `| Class | Coverage | Status |\n`;
+              commentBody += `|-------|----------|--------|\n`;
+              coverageDetails.forEach(c => {
+                const icon = c.percent >= 86 ? '✅' : '❌';
+                const status = c.percent >= 86 ? 'Pass' : 'Below threshold';
+                commentBody += `| ${c.name} | ${c.percent}% | ${icon} ${status} |\n`;
+              });
+              commentBody += `\n`;
+              
+              // Highlight classes below threshold
+              const classesBelow = coverageDetails.filter(c => c.percent < 86);
+              if (classesBelow.length > 0) {
+                commentBody += `### ⚠️ Classes Below 86% Coverage Threshold\n\n`;
+                commentBody += `The following class(es) need improved coverage:\n\n`;
+                classesBelow.forEach(c => {
+                  commentBody += `- **${c.name}**: ${c.percent}% (needs ${(86 - c.percent).toFixed(2)}% more)\n`;
+                });
+                commentBody += `\n`;
+              }
+            }
+            
+            // Failed tests
+            if (failedTests.length > 0) {
+              commentBody += `### ❌ Failed Tests\n\n`;
+              commentBody += `| Class | Method | Message |\n`;
+              commentBody += `|-------|--------|--------|\n`;
+              failedTests.forEach(t => {
+                const truncatedMsg = t.message.length > 100 ? t.message.substring(0, 100) + '...' : t.message;
+                commentBody += `| ${t.className} | ${t.methodName} | ${truncatedMsg} |\n`;
+              });
+              commentBody += `\n`;
+            }
+            
+            // Validation requirements summary
+            if (!validationPassed) {
+              commentBody += `### 📋 Validation Requirements\n\n`;
+              commentBody += `All of the following must be met:\n`;
+              commentBody += `- ${testsFailing === 0 ? '✅' : '❌'} All test methods pass\n`;
+              const allIndividualPass = coverageDetails.every(c => c.percent >= 86);
+              commentBody += `- ${allIndividualPass ? '✅' : '❌'} Each individual class has ≥ 86% coverage\n`;
+              commentBody += `- ${parseFloat(avgCoverage) >= 86 ? '✅' : '❌'} Average coverage ≥ 86%\n\n`;
+            }
+            
+            commentBody += `\n---\n`;
+            commentBody += `<sub>🤖 Automated Apex Test Validation | [View Workflow Run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})</sub>`;
+            
+            // Find existing comment to update
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber
+            });
+            
+            const botComment = comments.data.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('## ') && 
+              comment.body.includes('Apex Test Results')
+            );
+            
+            if (botComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: commentBody
+              });
+              console.log('Updated existing PR comment');
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: commentBody
+              });
+              console.log('Created new PR comment');
+            }
+
+      - name: Fail workflow if validation failed
+        if: steps.check_apex.outputs.skip_validation == 'false' && steps.analyze_results.outputs.validation_status == 'failed'
+        run: |
+          echo "=========================================="
+          echo "❌ VALIDATION FAILED"
+          echo "=========================================="
+          echo ""
+          echo "Validation failed due to one or more of the following:"
+          echo "  - Test method failures"
+          echo "  - Individual class coverage below 86%"
+          echo "  - Average coverage below 86%"
+          echo ""
+          
+          CLASSES_BELOW='${{ steps.analyze_results.outputs.classes_below_threshold }}'
+          if [ -n "$CLASSES_BELOW" ]; then
+            echo "Classes with coverage below 86%: $CLASSES_BELOW"
+          fi
+          
+          echo ""
+          echo "Please check the PR comment for detailed results."
+          exit 1
+
+      - name: Generate Test Summary
+        if: steps.check_apex.outputs.skip_validation == 'false' && always()
+        run: |
+          echo "## Apex Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          APEX_CLASS_NAMES='${{ steps.pr_details.outputs.apex_class_names }}'
+          ALL_TEST_CLASSES='${{ steps.pr_details.outputs.all_test_classes }}'
+          
+          echo "### Changed Classes" >> $GITHUB_STEP_SUMMARY
+          echo "$(echo "$APEX_CLASS_NAMES" | jq -r 'join(", ")')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "### Test Classes" >> $GITHUB_STEP_SUMMARY
+          echo "$(echo "$ALL_TEST_CLASSES" | jq -r 'join(", ")')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f "./test-results/apex-tests-filtered-output.json" ]; then
+            RESULT_DATA=$(cat ./test-results/apex-tests-filtered-output.json)
+            
+            TESTS_RAN=$(echo "$RESULT_DATA" | jq -r '.tests | length')
+            PASSING=$(echo "$RESULT_DATA" | jq -r '[.tests[]? | select(.Outcome == "Pass" or .outcome == "Pass")] | length')
+            FAILING=$(echo "$RESULT_DATA" | jq -r '[.tests[]? | select(.Outcome == "Fail" or .outcome == "Fail")] | length')
+            
+            # Calculate average coverage for changed classes using jq
+            COVERAGE_DATA=$(echo "$RESULT_DATA" | jq 'if .coverage.coverage then .coverage.coverage else .coverage // [] end')
+            COVERAGE_COUNT=$(echo "$COVERAGE_DATA" | jq 'length')
+            
+            if [ "$COVERAGE_COUNT" -gt 0 ]; then
+              TOTAL_COV=$(echo "$COVERAGE_DATA" | jq '[.[].coveredPercent // .[].CoveredPercent // 0] | add')
+              AVG_COV=$(echo "$COVERAGE_DATA" | jq --argjson total "$TOTAL_COV" --argjson count "$COVERAGE_COUNT" '$total / $count | . * 100 | floor | . / 100')
+              AVG_COV_INT=$(echo "$COVERAGE_DATA" | jq --argjson total "$TOTAL_COV" --argjson count "$COVERAGE_COUNT" '$total / $count | floor')
+              
+              # Check if all individual classes meet threshold
+              CLASSES_BELOW_86=$(echo "$COVERAGE_DATA" | jq '[.[] | select((.coveredPercent // .CoveredPercent // 0) < 86)] | length')
+            else
+              AVG_COV="N/A"
+              AVG_COV_INT=0
+              CLASSES_BELOW_86=0
+            fi
+            
+            # Validation passes only if all conditions are met
+            if [ "$FAILING" -eq 0 ] && [ "$AVG_COV" != "N/A" ] && [ "$AVG_COV_INT" -ge 86 ] && [ "$CLASSES_BELOW_86" -eq 0 ]; then
+              echo "### ✅ Validation Passed" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "### ❌ Validation Failed" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Test Methods Ran | $TESTS_RAN |" >> $GITHUB_STEP_SUMMARY
+            echo "| Passing | $PASSING |" >> $GITHUB_STEP_SUMMARY
+            echo "| Failing | $FAILING |" >> $GITHUB_STEP_SUMMARY
+            echo "| Avg Coverage (Changed Classes) | ${AVG_COV}% |" >> $GITHUB_STEP_SUMMARY
+            echo "| Required Coverage (Individual & Avg) | 86% |" >> $GITHUB_STEP_SUMMARY
+            
+            # Coverage per changed class with individual status
+            if [ "$COVERAGE_COUNT" -gt 0 ]; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "### Coverage by Changed Class" >> $GITHUB_STEP_SUMMARY
+              echo "> Each individual class must have ≥ 86% coverage" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "| Class | Coverage | Status |" >> $GITHUB_STEP_SUMMARY
+              echo "|-------|----------|--------|" >> $GITHUB_STEP_SUMMARY
+              echo "$COVERAGE_DATA" | jq -r '.[] | 
+                (.coveredPercent // .CoveredPercent // 0) as $pct |
+                if $pct >= 86 then
+                  "| \(.name // .Name) | \($pct)% | ✅ Pass |"
+                else
+                  "| \(.name // .Name) | \($pct)% | ❌ Below threshold |"
+                end
+              ' >> $GITHUB_STEP_SUMMARY 2>/dev/null
+              
+              # List classes below threshold
+              if [ "$CLASSES_BELOW_86" -gt 0 ]; then
+                echo "" >> $GITHUB_STEP_SUMMARY
+                echo "### ⚠️ Classes Below 86% Threshold" >> $GITHUB_STEP_SUMMARY
+                echo "$COVERAGE_DATA" | jq -r '.[] | select((.coveredPercent // .CoveredPercent // 0) < 86) | "- **\(.name // .Name)**: \(.coveredPercent // .CoveredPercent // 0)%"' >> $GITHUB_STEP_SUMMARY 2>/dev/null
+              fi
+            fi
+            
+            if [ "$FAILING" -gt 0 ]; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "### Failed Tests" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              echo "$RESULT_DATA" | jq -r '.tests[]? | select(.Outcome == "Fail" or .outcome == "Fail") | "• \(.ApexClass.Name // .apexClass.name).\(.MethodName // .methodName): \(.Message // .message // "No message")"' >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "Could not parse failed tests" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            # Validation requirements checklist
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Validation Requirements" >> $GITHUB_STEP_SUMMARY
+            if [ "$FAILING" -eq 0 ]; then
+              echo "- ✅ All test methods pass" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- ❌ All test methods pass" >> $GITHUB_STEP_SUMMARY
+            fi
+            if [ "$CLASSES_BELOW_86" -eq 0 ] && [ "$COVERAGE_COUNT" -gt 0 ]; then
+              echo "- ✅ Each individual class has ≥ 86% coverage" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- ❌ Each individual class has ≥ 86% coverage" >> $GITHUB_STEP_SUMMARY
+            fi
+            if [ "$AVG_COV" != "N/A" ] && [ "$AVG_COV_INT" -ge 86 ]; then
+              echo "- ✅ Average coverage ≥ 86%" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- ❌ Average coverage ≥ 86%" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "### ⚠️ No filtered test results available" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload Test Results
+        if: steps.check_apex.outputs.skip_validation == 'false' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: apex-test-results
+          path: ./test-results/
+          retention-days: 7
