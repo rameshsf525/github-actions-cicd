@@ -1,0 +1,823 @@
+name: Salesforce deployment to ruat
+# rameshuat-dev-ed.develop.lightning.force.com/
+on:
+  push:
+    branches:
+      - ruat
+      - release/*
+
+  pull_request:
+    branches:
+      - ruat
+      - release/*
+
+env:
+  POST_DEPLOY_DIR: 'deploy/post-deploy'
+  TRACKER_FILE: '.post-deploy-tracker.json'
+  MANUAL_STEPS_DIR: 'deploy/manual-steps'
+
+jobs:
+  deployment:
+    name: Deploy Salesforce Code
+    runs-on:
+      group: 'Concordia-WestUS3'
+      labels: 'concordia-linux-cpu2-ram7gi'
+
+    permissions:
+      contents: write
+      actions: read
+
+    outputs:
+      deploy_success: ${{ steps.deploy-manifest.outcome == 'success' || steps.has-deployment-content.outputs.has_content == 'false' }}
+      base_sha: ${{ steps.delta-range.outputs.base-sha }}
+      head_sha: ${{ steps.delta-range.outputs.head-sha }}
+      has_content: ${{ steps.has-deployment-content.outputs.has_content }}
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+        with:
+          # Need full history to diff arbitrary SHAs reliably
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Git Identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      # FIX: ensure shell scripts are executable (prevents "Permission denied")
+      - name: Ensure scripts are executable
+        run: |
+          chmod +x ./scripts/*.sh || true
+          ls -la ./scripts || true
+
+      - name: Install prerequisites (jq, bc, awk, xmlstarlet)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq bc gawk xmlstarlet
+
+      - name: Create deployment build directory
+        run: |
+          mkdir -p /tmp/deployment/force-app/main/default
+
+      # --- Determine delta base/head range (same approach as develop.yml, but for release workflow) ---
+      - name: Determine delta range (base/head)
+        id: delta-range
+        run: |
+          set -euo pipefail
+
+          echo "Event: ${{ github.event_name }}"
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+            echo "Using PR base/head for delta."
+          else
+            # push event
+            BASE_SHA="${{ github.event.before }}"
+            HEAD_SHA="${{ github.sha }}"
+            echo "Using push before/head for delta."
+          fi
+
+          # Some edge cases (e.g., first commit on branch) can have all-zero before SHA
+          if [[ "${BASE_SHA}" == "0000000000000000000000000000000000000000" ]]; then
+            echo "BASE_SHA is all zeros; falling back to previous commit of HEAD_SHA."
+            BASE_SHA="$(git rev-parse "${HEAD_SHA}^" 2>/dev/null || true)"
+          fi
+
+          echo "BASE_SHA=${BASE_SHA}" >> "$GITHUB_ENV"
+          echo "HEAD_SHA=${HEAD_SHA}" >> "$GITHUB_ENV"
+          echo "base-sha=${BASE_SHA}" >> "$GITHUB_OUTPUT"
+          echo "head-sha=${HEAD_SHA}" >> "$GITHUB_OUTPUT"
+
+          echo "Delta range set:"
+          echo "  BASE_SHA=${BASE_SHA}"
+          echo "  HEAD_SHA=${HEAD_SHA}"
+
+      - name: Determine delta mode
+        id: set-delta-mode
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ] && [ "${{ github.repository }}" = "rameshsf525/github-actions-cicd" ]; then
+            mode="pr"
+          else
+            mode="commit"
+          fi
+          echo "delta-mode=$mode" >> $GITHUB_OUTPUT
+          echo "DELTA_MODE=$mode" >> $GITHUB_ENV
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.5.0"
+
+      - name: Install Salesforce CLI
+        run: |
+          npm install -g @salesforce/cli@latest
+          sf --version
+
+      - name: Authorize SFDC org
+        run: |
+          ./scripts/Rauth.sh "${{ secrets.SALESFORCE_CLIENT_ID_art5poc }}" \
+            "${{ secrets.SALESFORCE_CLIENT_SECRET_art5poc }}" \
+            "${{ inputs.sf_target_org || 'art5poc' }}" \
+            "${{ secrets.SALESFORCE_CRED_art5poc }}"
+
+      - name: Get deployment delta
+        run: |
+          set -euo pipefail
+          set -x
+          echo "Delta range: ${BASE_SHA}..${HEAD_SHA}"
+          echo "DELTA_MODE: ${DELTA_MODE}"
+
+          ./scripts/Rsfdelta.sh \
+            "${BASE_SHA}" \
+            "${HEAD_SHA}" \
+            "${DELTA_MODE}"
+          
+          echo "=== Files copied to /tmp/deployment ==="
+          find /tmp/deployment -type f 2>/dev/null | head -100 || echo "No files found"
+          echo "======================================="
+
+      - name: Extract delta CustomLabels for deployment
+        run: |
+          set -euo pipefail
+
+          LABELS_FILE="force-app/main/default/labels/CustomLabels.labels-meta.xml"
+          DELTA_LABELS_FILE="/tmp/deployment/force-app/main/default/labels/CustomLabels.labels-meta.xml"
+          DESTRUCTIVE_DIR="/tmp/deployment/destructiveChanges"
+          DESTRUCTIVE_FILE="${DESTRUCTIVE_DIR}/destructiveChanges.xml"
+          DESTRUCTIVE_PACKAGE="${DESTRUCTIVE_DIR}/package.xml"
+          NS="http://soap.sforce.com/2006/04/metadata"
+          mkdir -p "$(dirname "${DELTA_LABELS_FILE}")"
+
+          echo "Delta refs for CustomLabels step:"
+          echo "  BASE_SHA=${BASE_SHA}"
+          echo "  HEAD_SHA=${HEAD_SHA}"
+
+          # 0. Check if the labels file was changed at all
+          if ! git diff --name-only "${BASE_SHA}" "${HEAD_SHA}" -- "${LABELS_FILE}" | grep -q .; then
+            echo "No CustomLabels changes detected. Removing labels dir from deployment."
+            rm -rf "$(dirname "${DELTA_LABELS_FILE}")"
+            echo "HAS_DESTRUCTIVE_LABELS=false" >> "$GITHUB_ENV"
+            exit 0
+          fi
+
+          # 1. Extract the BASE and HEAD versions of the file
+          BASE_LABELS="/tmp/base_CustomLabels.xml"
+          HEAD_LABELS="/tmp/head_CustomLabels.xml"
+
+          # Base version (may not exist if file is brand new)
+          if git show "${BASE_SHA}:${LABELS_FILE}" > "${BASE_LABELS}" 2>/dev/null; then
+            sed -i 's|^\(<?xml [^?]*?>\).*|\1|' "${BASE_LABELS}"
+          else
+            echo '<?xml version="1.0" encoding="UTF-8"?><CustomLabels xmlns="'"${NS}"'"/>' > "${BASE_LABELS}"
+          fi
+
+          # Head version
+          if git show "${HEAD_SHA}:${LABELS_FILE}" > "${HEAD_LABELS}" 2>/dev/null; then
+            sed -i 's|^\(<?xml [^?]*?>\).*|\1|' "${HEAD_LABELS}"
+          else
+            cp "${LABELS_FILE}" "${HEAD_LABELS}"
+            sed -i 's|^\(<?xml [^?]*?>\).*|\1|' "${HEAD_LABELS}"
+          fi
+
+          # Validate the HEAD XML
+          if ! xmlstarlet val "${HEAD_LABELS}" 2>/dev/null; then
+            echo "ERROR: ${LABELS_FILE} is not valid XML even after cleanup. Please fix the file."
+            head -5 "${HEAD_LABELS}"
+            exit 1
+          fi
+
+          # 2. Get all label fullNames from HEAD and BASE (clean: trim whitespace, remove blank lines, normalize)
+          xmlstarlet sel -N x="${NS}" \
+            -t -v "//x:labels/x:fullName" -nl \
+            "${HEAD_LABELS}" 2>/dev/null \
+            | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d' \
+            | LC_ALL=C sort > /tmp/head_label_names.txt || true
+
+          xmlstarlet sel -N x="${NS}" \
+            -t -v "//x:labels/x:fullName" -nl \
+            "${BASE_LABELS}" 2>/dev/null \
+            | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed '/^$/d' \
+            | LC_ALL=C sort > /tmp/base_label_names.txt || true
+
+          # 3. Detect deleted/renamed labels (present in BASE but missing from HEAD)
+          LC_ALL=C comm -23 /tmp/base_label_names.txt /tmp/head_label_names.txt > /tmp/deleted_labels.txt || true
+
+          HAS_DESTRUCTIVE="false"
+
+          if [ -s /tmp/deleted_labels.txt ]; then
+            echo "============================================"
+            echo "Deleted/renamed labels detected (will be removed from destination):"
+            while IFS= read -r dl; do
+              echo "  ✗ ${dl}"
+            done < /tmp/deleted_labels.txt
+            echo "============================================"
+
+            mkdir -p "${DESTRUCTIVE_DIR}"
+
+            {
+              echo '<?xml version="1.0" encoding="UTF-8"?>'
+              echo '<Package xmlns="'"${NS}"'">'
+              echo '  <types>'
+              while IFS= read -r dl; do
+                [ -z "${dl}" ] && continue
+                echo "    <members>${dl}</members>"
+              done < /tmp/deleted_labels.txt
+              echo '    <name>CustomLabel</name>'
+              echo '  </types>'
+              echo '</Package>'
+            } > "${DESTRUCTIVE_FILE}"
+
+            {
+              echo '<?xml version="1.0" encoding="UTF-8"?>'
+              echo '<Package xmlns="'"${NS}"'">'
+              echo '  <version>62.0</version>'
+              echo '</Package>'
+            } > "${DESTRUCTIVE_PACKAGE}"
+
+            HAS_DESTRUCTIVE="true"
+
+            echo ""
+            echo "--- destructiveChanges.xml ---"
+            cat "${DESTRUCTIVE_FILE}"
+            echo ""
+
+            MEMBER_COUNT=$(grep -c '<members>' "${DESTRUCTIVE_FILE}" || true)
+            echo "Destructive changes: ${MEMBER_COUNT} label(s) to delete."
+            if [ "${MEMBER_COUNT}" -eq 0 ]; then
+              echo "WARNING: destructiveChanges.xml has no members. Cleaning up."
+              rm -rf "${DESTRUCTIVE_DIR}"
+              HAS_DESTRUCTIVE="false"
+            fi
+          else
+            echo "No deleted/renamed labels detected."
+          fi
+
+          echo "HAS_DESTRUCTIVE_LABELS=${HAS_DESTRUCTIVE}" >> "$GITHUB_ENV"
+          echo "DESTRUCTIVE_DIR=${DESTRUCTIVE_DIR}" >> "$GITHUB_ENV"
+
+          # 4. Compare each HEAD label against its BASE counterpart (new + modified)
+          echo '<?xml version="1.0" encoding="UTF-8"?>' > "${DELTA_LABELS_FILE}"
+          echo "<CustomLabels xmlns=\"${NS}\">" >> "${DELTA_LABELS_FILE}"
+
+          FOUND_COUNT=0
+          while IFS= read -r label; do
+            [ -z "${label}" ] && continue
+
+            HEAD_BLOCK=$(xmlstarlet sel -N x="${NS}" \
+              -t -c "//x:labels[x:fullName='${label}']" \
+              "${HEAD_LABELS}" 2>/dev/null) || true
+
+            BASE_BLOCK=$(xmlstarlet sel -N x="${NS}" \
+              -t -c "//x:labels[x:fullName='${label}']" \
+              "${BASE_LABELS}" 2>/dev/null) || true
+
+            if [ "${HEAD_BLOCK}" != "${BASE_BLOCK}" ]; then
+              if [ -z "${BASE_BLOCK}" ]; then
+                echo "  ✓ New label:      ${label}"
+              else
+                echo "  ✓ Modified label: ${label}"
+              fi
+              echo "${HEAD_BLOCK}" >> "${DELTA_LABELS_FILE}"
+              FOUND_COUNT=$((FOUND_COUNT + 1))
+            fi
+          done < /tmp/head_label_names.txt
+
+          echo "</CustomLabels>" >> "${DELTA_LABELS_FILE}"
+
+          echo ""
+          echo "Total labels in BASE:  $(wc -l < /tmp/base_label_names.txt | tr -d ' ')"
+          echo "Total labels in HEAD:  $(wc -l < /tmp/head_label_names.txt | tr -d ' ')"
+          echo "Labels changed/added:  ${FOUND_COUNT}"
+          echo ""
+
+          if [ "${FOUND_COUNT}" -gt 0 ]; then
+            echo "--- Delta CustomLabels file ---"
+            cat "${DELTA_LABELS_FILE}"
+          else
+            echo "No actual label content changes detected. Removing labels dir from deployment."
+            rm -rf "$(dirname "${DELTA_LABELS_FILE}")"
+          fi
+
+      - name: Check if deployment content exists
+        id: has-deployment-content
+        run: |
+          echo "=== Checking deployment content ==="
+          echo "Listing /tmp/deployment structure:"
+          find /tmp/deployment -type f 2>/dev/null | head -50 || echo "No files found"
+          echo "==================================="
+          
+          # Check if directory exists first
+          if [ -d "/tmp/deployment/force-app/main/default" ]; then
+            count=$(find /tmp/deployment/force-app/main/default -type f 2>/dev/null | wc -l)
+            echo "Files found in force-app/main/default: $count"
+          else
+            echo "Directory /tmp/deployment/force-app/main/default does not exist"
+            count=0
+          fi
+          
+          if [ "$count" -gt 0 ]; then
+            echo "has_content=true" >> $GITHUB_OUTPUT
+            echo "✅ Deployment content found - proceeding with deployment"
+          else
+            echo "has_content=false" >> $GITHUB_OUTPUT
+            echo "⚠️ No deployment content found - subsequent steps will be skipped"
+          fi
+
+      - name: Generate Salesforce manifest (including all metadata)
+        id: generate-manifest
+        if: steps.has-deployment-content.outputs.has_content == 'true'
+        continue-on-error: false
+        run: |
+          cp sfdx-project.json /tmp/deployment/sfdx-project.json
+          cd /tmp/deployment/
+          sf project generate manifest --source-dir force-app --name package.xml --output-dir manifest
+          manifest_status=$?
+          if [ $manifest_status -ne 0 ]; then
+            echo "Manifest generation failed. Check that all components in force-app are present and named correctly."
+            exit 1
+          fi
+          cat manifest/package.xml
+
+      - name: Validate Salesforce manifest
+        id: validate-manifest
+        if: |
+          github.event_name == 'pull_request' &&
+          github.base_ref == 'ruat' &&
+          steps.has-deployment-content.outputs.has_content == 'true'
+        continue-on-error: false
+        run: |
+          ./scripts/Rvalidate.sh \
+            "${{ inputs.sf_target_org || 'art5poc' }}" \
+            "${{ runner.temp }}"
+
+      - name: Validate destructive changes (dry-run)
+        id: validate-destructive
+        if: |
+          github.event_name == 'pull_request' &&
+          github.base_ref == 'ruat'
+        continue-on-error: false
+        run: |
+          ./scripts/Rdestructive.sh \
+            "${BASE_SHA}" \
+            "${HEAD_SHA}" \
+            "${{ inputs.sf_target_org || 'art5poc' }}" \
+            "${{ runner.temp }}" \
+            "validate"
+
+      - name: Generate deployed-components commit report (CSV grouped by user)
+        id: deployed-commit-report
+        if: steps.has-deployment-content.outputs.has_content == 'true'
+        run: |
+          set -euo pipefail
+          DEPLOY_ROOT="/tmp/deployment/force-app/main/default"
+          REPORT_DIR="/tmp/deployment/reports"
+          mkdir -p "${REPORT_DIR}"
+          DEPLOYED_FILES_LIST="${REPORT_DIR}/deployed_files.txt"
+          COMPONENT_MAP="${REPORT_DIR}/component_map.tsv"
+          CSV_OUT="${REPORT_DIR}/deployed_components_commit_report.csv"
+
+          find "${DEPLOY_ROOT}" -type f | sed "s|^/tmp/deployment/||" | sort > "${DEPLOYED_FILES_LIST}"
+
+          awk -F'/' '
+            function add(t,n,p){ if(t!="" && n!="") print t "\t" n "\t" p; }
+            {
+              p=$0
+              t="File"
+              n=$0
+              add(t,n,p)
+            }
+          ' "${DEPLOYED_FILES_LIST}" | sort -u > "${COMPONENT_MAP}"
+
+          echo "author_email,changed_file,commits" > "${CSV_OUT}"
+
+          tmp="${REPORT_DIR}/tmp_all.tsv"
+          : > "${tmp}"
+
+          cut -f3 "${COMPONENT_MAP}" | sort -u | while IFS= read -r f; do
+            git log --no-merges --pretty=format:'%ae%x09%H' "${BASE_SHA}..${HEAD_SHA}" -- "$f" \
+              | awk -v file="$f" -F'\t' '{print $1"\t"file"\t"$2}' >> "${tmp}" || true
+          done
+
+          awk -F'\t' '
+            {
+              key=$1 FS $2
+              commits[key][$3]=1
+            }
+            END{
+              for (k in commits) {
+                c=0; for (x in commits[k]) c++
+                split(k,parts,FS)
+                ae=parts[1]; file=parts[2]
+                printf "%s,%s,%d\n", ae, file, c
+              }
+            }
+          ' "${tmp}" | sort >> "${CSV_OUT}"
+
+          echo "CSV report created at: ${CSV_OUT}"
+          echo "CSV_PATH=${CSV_OUT}" >> "$GITHUB_ENV"
+
+      - name: Upload deployed-components commit report (CSV)
+        if: steps.has-deployment-content.outputs.has_content == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployed-components-commit-report
+          path: /tmp/deployment/reports/deployed_components_commit_report.csv
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Deploy Salesforce manifest
+        id: deploy-manifest
+        if: github.event_name != 'pull_request' && steps.has-deployment-content.outputs.has_content == 'true'
+        continue-on-error: false
+        run: |
+          echo "===== manifest/package.xml for Main Deployment ====="
+          cat /tmp/deployment/manifest/package.xml
+          echo "==================================================="
+          ./scripts/Rdeploy.sh \
+            "${{ inputs.sf_target_org || 'art5poc' }}" \
+            "${{ env.DEPLOY_ID }}" \
+            "${{ runner.temp }}"
+
+      - name: Deploy destructive changes (delete other metadata types)
+        id: deploy-destructive-metadata
+        if: github.event_name != 'pull_request'
+        continue-on-error: false
+        run: |
+          ./scripts/Rdestructive.sh \
+            "${BASE_SHA}" \
+            "${HEAD_SHA}" \
+            "${{ inputs.sf_target_org || 'art5poc' }}" \
+            "${{ runner.temp }}"
+
+      - name: Deploy destructive changes (delete old/renamed labels)
+        id: deploy-destructive
+        if: github.event_name != 'pull_request' && env.HAS_DESTRUCTIVE_LABELS == 'true'
+        continue-on-error: false
+        run: |
+          set -euo pipefail
+
+          echo "===== Deploying destructive changes to remove old/renamed labels ====="
+          echo "--- destructiveChanges.xml ---"
+          cat "${DESTRUCTIVE_DIR}/destructiveChanges.xml"
+          echo ""
+          echo "--- package.xml (empty, for destructive deploy) ---"
+          cat "${DESTRUCTIVE_DIR}/package.xml"
+          echo "==================================================="
+
+          sf project deploy start \
+            --manifest "${DESTRUCTIVE_DIR}/package.xml" \
+            --post-destructive-changes "${DESTRUCTIVE_DIR}/destructiveChanges.xml" \
+            --target-org "${{ inputs.sf_target_org || 'art5poc' }}" \
+            --ignore-warnings \
+            --ignore-conflicts \
+            --wait 30 \
+            --verbose
+
+          echo "Destructive deployment completed. Old/renamed labels have been removed."
+
+      # -------------------- POST-DEPLOY STEPS --------------------
+      - name: Initialize Post-Deploy Tracker
+        id: init-tracker
+        if: github.event_name != 'pull_request'
+        run: |
+          set -euo pipefail
+          TRACKER_PATH="${{ env.TRACKER_FILE }}"
+          if [[ ! -f "${TRACKER_PATH}" ]]; then
+            echo '{"executed_scripts": {}, "last_updated": ""}' > "${TRACKER_PATH}"
+            echo "Initialized new tracker file."
+          else
+            echo "Tracker file exists."
+          fi
+          echo "tracker_path=${TRACKER_PATH}" >> "$GITHUB_OUTPUT"
+
+      - name: Detect Changed Release Versions
+        id: detect-releases
+        if: github.event_name != 'pull_request'
+        run: |
+          set -euo pipefail
+          POST_DEPLOY_DIR="${{ env.POST_DEPLOY_DIR }}"
+          echo "============================================"
+          echo "Detecting changed post-deploy files..."
+          echo "Delta: ${BASE_SHA}..${HEAD_SHA}"
+          echo "============================================"
+          CHANGED_FILES=$(git diff --name-only "${BASE_SHA}" "${HEAD_SHA}" -- "${POST_DEPLOY_DIR}/" 2>/dev/null || true)
+          if [[ -z "${CHANGED_FILES}" ]]; then
+            echo "No changes detected in ${POST_DEPLOY_DIR}/"
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            echo "release_versions=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "Changed files:"
+          echo "${CHANGED_FILES}" | sed 's/^/  /'
+          echo ""
+          RELEASE_VERSIONS=$(echo "${CHANGED_FILES}" | \
+            grep -E "^${POST_DEPLOY_DIR}/[^/]+/" | \
+            sed -E "s|^${POST_DEPLOY_DIR}/([^/]+)/.*|\1|" | \
+            sort -u | \
+            tr '\n' ',' | \
+            sed 's/,$//')
+          if [[ -z "${RELEASE_VERSIONS}" ]]; then
+            echo "No valid release version directories found in changes."
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            echo "release_versions=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "============================================"
+          echo "Release versions with changes:"
+          echo "${RELEASE_VERSIONS}" | tr ',' '\n' | sed 's/^/   - /'
+          echo "============================================"
+          echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          echo "release_versions=${RELEASE_VERSIONS}" >> "$GITHUB_OUTPUT"
+          echo "RELEASE_VERSIONS=${RELEASE_VERSIONS}" >> "$GITHUB_ENV"
+
+      - name: Execute Post-Deployment Apex Scripts
+        id: execute-apex
+        if: github.event_name != 'pull_request' && steps.detect-releases.outputs.has_changes == 'true'
+        env:
+          TARGET_ORG: ${{ inputs.sf_target_org || 'art5poc' }}
+        run: |
+          set -euo pipefail
+          POST_DEPLOY_DIR="${{ env.POST_DEPLOY_DIR }}"
+          TRACKER_PATH="${{ env.TRACKER_FILE }}"
+          REPORT_DIR="/tmp/post-deploy-reports"
+          mkdir -p "${REPORT_DIR}"
+          TOTAL_EXECUTED=0
+          TOTAL_FAILED=0
+          TOTAL_SKIPPED=0
+          ALL_FAILED_SCRIPTS=""
+          PROCESSED_RELEASES=""
+          IFS=',' read -ra VERSIONS <<< "${RELEASE_VERSIONS}"
+          for RELEASE_VERSION in "${VERSIONS[@]}"; do
+            [[ -z "${RELEASE_VERSION}" ]] && continue
+            RELEASE_DIR="${POST_DEPLOY_DIR}/${RELEASE_VERSION}"
+            echo ""
+            echo "========================================"
+            echo "Processing Release: ${RELEASE_VERSION}"
+            echo "========================================"
+            if [[ ! -d "${RELEASE_DIR}" ]]; then
+              echo "Directory not found: ${RELEASE_DIR}"
+              continue
+            fi
+            APEX_FILES=$(find "${RELEASE_DIR}" -name "*.apex" -type f 2>/dev/null | sort || true)
+            if [[ -z "${APEX_FILES}" ]]; then
+              echo "No Apex scripts found in ${RELEASE_DIR}"
+              continue
+            fi
+            RELEASE_EXECUTED=0
+            RELEASE_FAILED=0
+            RELEASE_SKIPPED=0
+            while IFS= read -r apex_file; do
+              [[ -z "${apex_file}" ]] && continue
+              FILENAME=$(basename "${apex_file}")
+              FILE_HASH=$(sha256sum "${apex_file}" | cut -d' ' -f1)
+              echo ""
+              echo "--- ${FILENAME} ---"
+              echo "Hash: ${FILE_HASH:0:16}..."
+              TRACKER_KEY="${RELEASE_VERSION}/${FILENAME}"
+              STORED_HASH=$(jq -r --arg key "${TRACKER_KEY}" '.executed_scripts[$key].hash // ""' "${TRACKER_PATH}")
+              if [[ "${STORED_HASH}" == "${FILE_HASH}" ]]; then
+                echo "SKIPPED: Already executed (hash matches)"
+                RELEASE_SKIPPED=$((RELEASE_SKIPPED + 1))
+                TOTAL_SKIPPED=$((TOTAL_SKIPPED + 1))
+                continue
+              fi
+              if [[ -n "${STORED_HASH}" ]]; then
+                echo "Script modified since last execution"
+              else
+                echo "New script - first execution"
+              fi
+              echo "Executing against ${TARGET_ORG}..."
+              EXEC_OUTPUT="/tmp/apex_exec_${RELEASE_VERSION}_${FILENAME}.log"
+              EXEC_START=$(date +%s)
+              if sf apex run --file "${apex_file}" --target-org "${TARGET_ORG}" > "${EXEC_OUTPUT}" 2>&1; then
+                EXEC_END=$(date +%s)
+                EXEC_DURATION=$((EXEC_END - EXEC_START))
+                echo "SUCCESS (${EXEC_DURATION}s)"
+                RELEASE_EXECUTED=$((RELEASE_EXECUTED + 1))
+                TOTAL_EXECUTED=$((TOTAL_EXECUTED + 1))
+                EXEC_TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+                jq --arg key "${TRACKER_KEY}" \
+                   --arg hash "${FILE_HASH}" \
+                   --arg ts "${EXEC_TIMESTAMP}" \
+                   --arg run_id "${{ github.run_id }}" \
+                   '.executed_scripts[$key] = {"hash": $hash, "executed_at": $ts, "run_id": $run_id}' \
+                   "${TRACKER_PATH}" > "${TRACKER_PATH}.tmp" && mv "${TRACKER_PATH}.tmp" "${TRACKER_PATH}"
+              else
+                EXEC_END=$(date +%s)
+                EXEC_DURATION=$((EXEC_END - EXEC_START))
+                echo "FAILED (${EXEC_DURATION}s)"
+                echo "--- Error Output ---"
+                cat "${EXEC_OUTPUT}" | head -30
+                echo "--- End Error ---"
+                RELEASE_FAILED=$((RELEASE_FAILED + 1))
+                TOTAL_FAILED=$((TOTAL_FAILED + 1))
+                ALL_FAILED_SCRIPTS="${ALL_FAILED_SCRIPTS}[${RELEASE_VERSION}] ${FILENAME}, "
+              fi
+            done <<< "${APEX_FILES}"
+            echo ""
+            echo "Release ${RELEASE_VERSION} Summary:"
+            echo "  Executed: ${RELEASE_EXECUTED}"
+            echo "  Failed:   ${RELEASE_FAILED}"
+            echo "  Skipped:  ${RELEASE_SKIPPED}"
+            PROCESSED_RELEASES="${PROCESSED_RELEASES}${RELEASE_VERSION},"
+          done
+          jq --arg ts "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" '.last_updated = $ts' \
+             "${TRACKER_PATH}" > "${TRACKER_PATH}.tmp" && mv "${TRACKER_PATH}.tmp" "${TRACKER_PATH}"
+          echo ""
+          echo "========================================"
+          echo "OVERALL APEX EXECUTION SUMMARY"
+          echo "========================================"
+          echo "Total Executed: ${TOTAL_EXECUTED}"
+          echo "Total Failed:   ${TOTAL_FAILED}"
+          echo "Total Skipped:  ${TOTAL_SKIPPED}"
+          if [[ ${TOTAL_FAILED} -gt 0 ]]; then
+            echo ""
+            echo "FAILED SCRIPTS: ${ALL_FAILED_SCRIPTS}"
+          fi
+          echo "executed_count=${TOTAL_EXECUTED}" >> "$GITHUB_OUTPUT"
+          echo "failed_count=${TOTAL_FAILED}" >> "$GITHUB_OUTPUT"
+          echo "skipped_count=${TOTAL_SKIPPED}" >> "$GITHUB_OUTPUT"
+          echo "processed_releases=${PROCESSED_RELEASES%,}" >> "$GITHUB_OUTPUT"
+          echo "APEX_TOTAL_EXECUTED=${TOTAL_EXECUTED}" >> "$GITHUB_ENV"
+          echo "APEX_TOTAL_FAILED=${TOTAL_FAILED}" >> "$GITHUB_ENV"
+          echo "APEX_TOTAL_SKIPPED=${TOTAL_SKIPPED}" >> "$GITHUB_ENV"
+          echo "APEX_FAILED_SCRIPTS=${ALL_FAILED_SCRIPTS}" >> "$GITHUB_ENV"
+          echo "APEX_PROCESSED_RELEASES=${PROCESSED_RELEASES%,}" >> "$GITHUB_ENV"
+          if [[ ${TOTAL_FAILED} -gt 0 ]]; then
+            echo "::error::${TOTAL_FAILED} Apex script(s) failed execution"
+            exit 1
+          fi
+
+      - name: Process Manual Steps
+        id: process-manual
+        if: github.event_name != 'pull_request' && steps.detect-releases.outputs.has_changes == 'true' && always()
+        run: |
+          set -euo pipefail
+          POST_DEPLOY_DIR="${{ env.POST_DEPLOY_DIR }}"
+          MANUAL_OUTPUT_DIR="${{ env.MANUAL_STEPS_DIR }}"
+          TRACKER_PATH="${{ env.TRACKER_FILE }}"
+          mkdir -p "${MANUAL_OUTPUT_DIR}"
+          TOTAL_MANUAL_COUNT=0
+          HAS_NEW_MANUAL="false"
+          RELEASES_WITH_MANUAL=""
+          > /tmp/new_manual_steps.txt
+          IFS=',' read -ra VERSIONS <<< "${RELEASE_VERSIONS}"
+          for RELEASE_VERSION in "${VERSIONS[@]}"; do
+            [[ -z "${RELEASE_VERSION}" ]] && continue
+            RELEASE_DIR="${POST_DEPLOY_DIR}/${RELEASE_VERSION}"
+            CONSOLIDATED_FILE="${MANUAL_OUTPUT_DIR}/${RELEASE_VERSION}.md"
+            echo ""
+            echo "========================================"
+            echo "Processing Manual Steps: ${RELEASE_VERSION}"
+            echo "========================================"
+            if [[ ! -d "${RELEASE_DIR}" ]]; then
+              echo "Directory not found: ${RELEASE_DIR}"
+              continue
+            fi
+            MANUAL_FILES=$(find "${RELEASE_DIR}" -type f 2>/dev/null \( \
+              -name "manual-*.md" \
+              -o -name "manual-*.xls" \
+              -o -name "manual-*.xlsx" \
+              -o -name "manual-*.pdf" \
+              -o -name "manual-*.doc" \
+              -o -name "manual-*.docx" \
+              -o -name "manual-*.png" \
+              -o -name "manual-*.jpg" \
+              -o -name "manual-*.jpeg" \
+              -o -name "manual-*.gif" \
+              -o -name "manual-*.bmp" \
+              -o -name "manual-*.svg" \
+              -o -name "manual-*.csv" \
+            \) | sort || true)
+            if [[ -z "${MANUAL_FILES}" ]]; then
+              echo "No manual step files found in ${RELEASE_DIR}"
+              continue
+            fi
+            RELEASE_MANUAL_COUNT=0
+            TEMP_CONSOLIDATED="/tmp/consolidated_manual_${RELEASE_VERSION}.md"
+            if [[ -f "${CONSOLIDATED_FILE}" ]]; then
+              cp "${CONSOLIDATED_FILE}" "${TEMP_CONSOLIDATED}"
+              echo "Existing consolidated file found, will append new steps."
+            else
+              CURRENT_BRANCH="${{ github.ref_name }}"
+              echo "# Manual Deployment Steps - Release ${RELEASE_VERSION}" > "${TEMP_CONSOLIDATED}"
+              echo "" >> "${TEMP_CONSOLIDATED}"
+              echo "> **Generated:** $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> "${TEMP_CONSOLIDATED}"
+              echo "> **Repository:** ${{ github.repository }}" >> "${TEMP_CONSOLIDATED}"
+              echo "> **Branch:** ${CURRENT_BRANCH}" >> "${TEMP_CONSOLIDATED}"
+              echo "" >> "${TEMP_CONSOLIDATED}"
+              echo "---" >> "${TEMP_CONSOLIDATED}"
+            fi
+            while IFS= read -r manual_file; do
+              [[ -z "${manual_file}" ]] && continue
+              FILENAME=$(basename "${manual_file}")
+              FILE_HASH=$(sha256sum "${manual_file}" | cut -d' ' -f1)
+              RELATIVE_PATH="${manual_file}"
+              ITRACK=$(echo "${FILENAME}" | sed -n 's/manual-\([^-]*\)-\([^-]*\)-\(.*\)\.[^.]*$/\1/p')
+              ATTUID=$(echo "${FILENAME}" | sed -n 's/manual-\([^-]*\)-\([^-]*\)-\(.*\)\.[^.]*$/\2/p')
+              echo ""
+              echo "--- ${FILENAME} ---"
+              echo "iTrack: ${ITRACK} | ATTUID: ${ATTUID}"
+              TRACKER_KEY="manual/${RELEASE_VERSION}/${FILENAME}"
+              STORED_HASH=$(jq -r --arg key "${TRACKER_KEY}" '.executed_scripts[$key].hash // ""' "${TRACKER_PATH}")
+              if [[ "${STORED_HASH}" == "${FILE_HASH}" ]]; then
+                echo "SKIPPED: Already consolidated (hash matches)"
+                continue
+              fi
+              echo "Adding to consolidated manual steps"
+              HAS_NEW_MANUAL="true"
+              RELEASE_MANUAL_COUNT=$((RELEASE_MANUAL_COUNT + 1))
+              TOTAL_MANUAL_COUNT=$((TOTAL_MANUAL_COUNT + 1))
+              CURRENT_BRANCH="${{ github.ref_name }}"
+              FILE_URL="${{ github.server_url }}/${{ github.repository }}/blob/${CURRENT_BRANCH}/${RELATIVE_PATH}"
+              FILE_EXT="${FILENAME##*.}"
+              echo "" >> "${TEMP_CONSOLIDATED}"
+              echo "## ${FILENAME}" >> "${TEMP_CONSOLIDATED}"
+              echo "" >> "${TEMP_CONSOLIDATED}"
+              echo "| Field | Value |" >> "${TEMP_CONSOLIDATED}"
+              echo "|-------|-------|" >> "${TEMP_CONSOLIDATED}"
+              echo "| **iTrack#** | ${ITRACK} |" >> "${TEMP_CONSOLIDATED}"
+              echo "| **Developer (ATTUID)** | ${ATTUID} |" >> "${TEMP_CONSOLIDATED}"
+              echo "| **Release** | ${RELEASE_VERSION} |" >> "${TEMP_CONSOLIDATED}"
+              echo "| **Source File** | [${FILENAME}](${FILE_URL}) |" >> "${TEMP_CONSOLIDATED}"
+              echo "| **Added On** | $(date -u +'%Y-%m-%d %H:%M:%S UTC') |" >> "${TEMP_CONSOLIDATED}"
+              echo "| **Workflow Run** | [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) |" >> "${TEMP_CONSOLIDATED}"
+              echo "" >> "${TEMP_CONSOLIDATED}"
+              if [[ "${FILE_EXT,,}" == "md" ]]; then
+                MANUAL_CONTENT=$(cat "${manual_file}")
+                echo "### Steps to Execute:" >> "${TEMP_CONSOLIDATED}"
+                echo "" >> "${TEMP_CONSOLIDATED}"
+                echo "${MANUAL_CONTENT}" >> "${TEMP_CONSOLIDATED}"
+              else
+                echo "### File Reference:" >> "${TEMP_CONSOLIDATED}"
+                echo "" >> "${TEMP_CONSOLIDATED}"
+                echo "> This manual step is provided as a **${FILE_EXT^^}** file." >> "${TEMP_CONSOLIDATED}"
+                echo "> Please download and review the file using the link above." >> "${TEMP_CONSOLIDATED}"
+              fi
+              echo "" >> "${TEMP_CONSOLIDATED}"
+              echo "---" >> "${TEMP_CONSOLIDATED}"
+              PROC_TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+              jq --arg key "${TRACKER_KEY}" \
+                 --arg hash "${FILE_HASH}" \
+                 --arg ts "${PROC_TIMESTAMP}" \
+                 --arg run_id "${{ github.run_id }}" \
+                 '.executed_scripts[$key] = {"hash": $hash, "processed_at": $ts, "run_id": $run_id}' \
+                 "${TRACKER_PATH}" > "${TRACKER_PATH}.tmp" && mv "${TRACKER_PATH}.tmp" "${TRACKER_PATH}"
+              echo "${RELEASE_VERSION}|${FILENAME}|${ITRACK}|${ATTUID}|${FILE_URL}" >> /tmp/new_manual_steps.txt
+            done <<< "${MANUAL_FILES}"
+            if [[ ${RELEASE_MANUAL_COUNT} -gt 0 ]]; then
+              cp "${TEMP_CONSOLIDATED}" "${CONSOLIDATED_FILE}"
+              RELEASES_WITH_MANUAL="${RELEASES_WITH_MANUAL}${RELEASE_VERSION},"
+              echo ""
+              echo "Consolidated ${RELEASE_MANUAL_COUNT} manual step(s) to: ${CONSOLIDATED_FILE}"
+            fi
+          done
+          echo ""
+          echo "========================================"
+          echo "OVERALL MANUAL STEPS SUMMARY"
+          echo "========================================"
+          echo "Total New Steps: ${TOTAL_MANUAL_COUNT}"
+          echo "manual_count=${TOTAL_MANUAL_COUNT}" >> "$GITHUB_OUTPUT"
+          echo "has_new_manual=${HAS_NEW_MANUAL}" >> "$GITHUB_OUTPUT"
+          echo "releases_with_manual=${RELEASES_WITH_MANUAL%,}" >> "$GITHUB_OUTPUT"
+          echo "MANUAL_STEPS_FILE=/tmp/new_manual_steps.txt" >> "$GITHUB_ENV"
+          echo "HAS_NEW_MANUAL=${HAS_NEW_MANUAL}" >> "$GITHUB_ENV"
+          echo "MANUAL_COUNT=${TOTAL_MANUAL_COUNT}" >> "$GITHUB_ENV"
+          echo "RELEASES_WITH_MANUAL=${RELEASES_WITH_MANUAL%,}" >> "$GITHUB_ENV"
+
+      - name: Commit Tracker and Manual Steps
+        if: ${{ github.event_name != 'pull_request' && always() }}
+        run: |
+          set -euo pipefail
+          git add "${{ env.TRACKER_FILE }}" || true
+          git add "${{ env.MANUAL_STEPS_DIR }}/" || true
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            APEX_EXECUTED="${{ steps.execute-apex.outputs.executed_count || 0 }}"
+            MANUAL_ADDED="${{ steps.process-manual.outputs.manual_count || 0 }}"
+            RELEASES="${{ env.RELEASE_VERSIONS || 'none' }}"
+            git commit -m "chore: Update post-deploy tracker and manual steps [skip ci]
+
+          Releases: ${RELEASES}
+          Run: ${{ github.run_id }}
+          Apex: ${APEX_EXECUTED}
+          Manual: ${MANUAL_ADDED}"
+            git push origin HEAD:${{ github.ref_name }}
+            echo "Changes committed and pushed."
+          fi
+
+      - name: Upload Apex Execution Report
+        if: ${{ github.event_name != 'pull_request' && always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: apex-execution-report-${{ github.run_id }}
+          path: /tmp/post-deploy-reports/
+          if-no-files-found: ignore
+          retention-days: 30
+      # ------------------ END POST-DEPLOY STEPS ------------------
+
+   
