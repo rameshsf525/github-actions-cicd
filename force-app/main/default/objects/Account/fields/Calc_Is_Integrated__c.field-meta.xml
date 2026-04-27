@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Calc_Is_Integrated__c</fullName>
+    <defaultValue>false</defaultValue>
+    <description>&quot;CASE(
+DMS_Integration_Status == &quot;&quot;Complete - Pull &amp; Push&quot;&quot;, true,
+DMS_Integration_Status == &quot;&quot;Complete - Pull Only&quot;&quot;, true,
+true, false
+)&quot;</description>
+    <externalId>false</externalId>
+    <label>Is Integrated</label>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>false</trackHistory>
+    <type>Checkbox</type>
+</CustomField>

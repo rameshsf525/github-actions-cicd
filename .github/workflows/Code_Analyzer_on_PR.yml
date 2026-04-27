@@ -1,0 +1,424 @@
+name: Salesforce Code Analyzer on PR
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review, edited]
+    branches:
+      - main
+      - release/*
+      - preint/*
+      - qa
+      - sit
+      - uat
+      - stage
+      - rsit
+      - ruat
+
+jobs:
+  salesforce-code-analyzer-on-pr:
+    runs-on: concordia-linux-cpu2-ram7gi
+
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout PR branch HEAD only (works even with merge conflicts)
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          fetch-depth: 0
+
+      # PREREQUISITES
+      - name: Ensure Node.js 20.9+
+        uses: actions/setup-node@v5
+        with:
+          node-version: '>=20.9.0'
+
+      - name: Ensure Java 11+
+        uses: actions/setup-java@v5
+        with:
+          java-version: '11'
+          distribution: 'zulu'
+
+      - name: Ensure Python 3.10+
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.10'
+
+      - name: Install Salesforce CLI
+        run: npm install -g @salesforce/cli@latest
+
+      - name: Install Latest Salesforce Code Analyzer Plugin
+        run: echo 'y' | sf plugins install code-analyzer@latest
+
+      # Fetch target branch and calculate merge-base for accurate diff
+      - name: Fetch Target Branch and Calculate Merge Base
+        id: merge-base
+        run: |
+          echo "Fetching target branch to get latest commits..."
+          TARGET_BRANCH="${{ github.event.pull_request.base.ref }}"
+          PR_HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          echo "Target branch: $TARGET_BRANCH"
+          echo "PR Head SHA: $PR_HEAD_SHA"
+
+          # Add the BASE repository as 'upstream' so we always get the latest target branch commits.
+          # Critical for fork-based PRs: 'origin' points to the fork, not the base repo.
+          BASE_REPO_URL="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.event.pull_request.base.repo.full_name }}.git"
+          git remote add upstream "$BASE_REPO_URL" 2>/dev/null || git remote set-url upstream "$BASE_REPO_URL"
+          
+          # Force-fetch the target branch with explicit refspec to ensure tracking branch is updated
+          git fetch --no-tags upstream "+refs/heads/$TARGET_BRANCH:refs/remotes/upstream/$TARGET_BRANCH"
+
+          # Debug: show the latest commit on upstream target branch
+          UPSTREAM_HEAD=$(git rev-parse upstream/$TARGET_BRANCH)
+          echo "Upstream $TARGET_BRANCH HEAD: $UPSTREAM_HEAD"
+
+          # Calculate the merge-base between the LATEST target branch HEAD and PR HEAD.
+          # Use explicit SHA instead of HEAD to avoid ambiguity
+          MERGE_BASE=$(git merge-base upstream/$TARGET_BRANCH "$PR_HEAD_SHA")
+          
+          echo "========================================"
+          echo "Merge base SHA: $MERGE_BASE"
+          echo "PR Head SHA: $PR_HEAD_SHA"
+          echo "Upstream Target HEAD: $UPSTREAM_HEAD"
+          echo "Original base SHA (at PR creation): ${{ github.event.pull_request.base.sha }}"
+          echo "========================================"
+          
+          # Verify merge-base is different from original base if target moved forward
+          if [ "$MERGE_BASE" == "${{ github.event.pull_request.base.sha }}" ]; then
+            echo "Note: Merge base matches original PR base SHA."
+          else
+            echo "Merge base differs from original PR base SHA - target branch has new commits since PR was created."
+          fi
+
+          # Export merge-base for use in subsequent steps
+          echo "MERGE_BASE_SHA=$MERGE_BASE" >> $GITHUB_ENV
+          echo "merge_base=$MERGE_BASE" >> $GITHUB_OUTPUT
+
+      # Detect merge conflicts using git merge-tree (non-destructive, does not touch working tree)
+      - name: Detect Merge Conflicts with Target Branch
+        id: conflict-check
+        run: |
+          TARGET_BRANCH="${{ github.event.pull_request.base.ref }}"
+          PR_HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          echo "Checking for merge conflicts between PR branch and latest $TARGET_BRANCH..."
+
+          # git merge-tree performs a dry-run 3-way merge without modifying the working tree.
+          # Use upstream/$TARGET_BRANCH (base repo) — NOT origin/$TARGET_BRANCH (the fork).
+          # If conflict markers (<<<<<<<) appear in the output, the branches cannot be cleanly merged.
+          if git merge-tree $MERGE_BASE_SHA "$PR_HEAD_SHA" upstream/$TARGET_BRANCH | grep -q "<<<<<<<"; then
+            echo "HAS_CONFLICTS=true" >> $GITHUB_ENV
+            echo "⚠️ Merge conflicts detected between PR branch and $TARGET_BRANCH."
+          else
+            echo "HAS_CONFLICTS=false" >> $GITHUB_ENV
+            echo "✅ No merge conflicts detected. Proceeding with scan."
+          fi
+
+      # If conflicts exist: comment on PR and skip the scan (dev must resolve and push)
+      - name: Comment PR - Merge Conflicts Detected
+        if: env.HAS_CONFLICTS == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const targetBranch = context.payload.pull_request.base.ref;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: [
+                `⚠️ **Salesforce Code Analyzer: Merge Conflicts Detected — Scan Skipped**`,
+                ``,
+                `Your PR branch has **merge conflicts** with \`${targetBranch}\`. The code analyzer scan has been skipped because the diff cannot be accurately computed until conflicts are resolved.`,
+                ``,
+                `Please resolve the conflicts and push your branch. The scan will re-trigger automatically:`,
+                ``,
+                `\`\`\`bash`,
+                `git fetch origin`,
+                `git merge origin/${targetBranch}`,
+                `# resolve conflicts in your editor, then:`,
+                `git add .`,
+                `git commit -m "Resolve merge conflicts with ${targetBranch}"`,
+                `git push`,
+                `\`\`\``,
+                ``,
+                `> The scan compares only your committed changes against the latest \`${targetBranch}\` — no rework needed beyond resolving conflicts.`,
+              ].join('\n'),
+            });
+
+      # Get changed files in this PR (EXCLUDING DELETED FILES)
+      # Skipped automatically if merge conflicts were detected above (HAS_FILES will remain unset)
+      - name: Extract Changed Files in PR (Exclude Deleted Files)
+        id: get-changed-files
+        if: env.HAS_CONFLICTS != 'true'
+        run: |
+          PR_HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          echo "Getting metadata files changed in PR (excluding deleted files)..."
+          echo "Using merge-base SHA: $MERGE_BASE_SHA"
+          echo "Comparing against PR head: $PR_HEAD_SHA"
+          # Use --diff-filter=d (lowercase d means exclude deleted files)
+          # This will include Added, Copied, Modified, Renamed files only
+          # Using MERGE_BASE_SHA (calculated from current target branch) instead of base.sha (at PR creation)
+          git diff --name-only --diff-filter=d "$MERGE_BASE_SHA" "$PR_HEAD_SHA" \
+            | grep -E '\.(cls|trigger|apex|cmp|page|component|js|html|css|xml)$' \
+            > changed_files.txt || true
+
+          if [ -s changed_files.txt ]; then
+            echo "Changed files (existing only):"
+            cat changed_files.txt
+            echo "HAS_FILES=true" >> $GITHUB_ENV
+          else
+            echo "No existing files to analyze (all changes may be deletions or non-analyzable files)"
+            echo "HAS_FILES=false" >> $GITHUB_ENV
+          fi
+
+      - name: Set Changed Files as Environment Variable
+        id: changed-files
+        if: env.HAS_FILES == 'true'
+        run: |
+          CHANGED_FILES=$(cat changed_files.txt)
+          CHANGED_FILES_ESCAPED=$(echo "$CHANGED_FILES" | awk '{printf "\"%s\" ", $0}')
+          echo "CHANGED_FILES=$CHANGED_FILES_ESCAPED" >> $GITHUB_ENV
+
+      # Run analyzer only if there are changed files
+      - name: Run Salesforce Code Analyzer (Delta Files Only)
+        if: env.HAS_FILES == 'true'
+        id: run-code-analyzer
+        uses: forcedotcom/run-code-analyzer@v2.3.0
+        with:
+          run-arguments: --target ${{ env.CHANGED_FILES }} --view detail --output-file sfca_results.html --output-file sfca_results.json
+          results-artifact-name: salesforce-code-analyzer-results
+          github-token: ${{ github.token }}
+
+      - name: Upload Analyzer Results
+        if: env.HAS_FILES == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: sfca-results
+          path: sfca_results.json
+
+      # Filter violations for committed files
+      - name: Filter Violations for Changed Files
+        if: env.HAS_FILES == 'true'
+        run: |
+          echo "Filtering sfca_results.json for files changed in PR..."
+          mkdir -p results
+          echo "Changed files:"
+          cat changed_files.txt
+
+          jq_filter=$(awk '{printf "(.file == \"%s\") or ", $0}' changed_files.txt | sed 's/ or $//')
+          echo "Generated jq filter:"
+          echo "$jq_filter"
+
+          jq "[ .violations[] | select(.locations | any($jq_filter)) ]" sfca_results.json > results/pr_violations.json
+
+          echo "Filtered violations:"
+          cat results/pr_violations.json
+
+          if [ "$(jq length results/pr_violations.json)" -eq 0 ]; then
+            echo "No violations matched the PR files."
+          else
+            echo "Filtered violations saved to results/pr_violations.json"
+          fi
+
+      - name: Upload Filtered Violations
+        if: env.HAS_FILES == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-violations
+          path: results/pr_violations.json
+
+      # (Optional) Install GNU awk for line-level extraction
+      - name: Install GNU awk (gawk)
+        if: env.HAS_FILES == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gawk
+
+      # Extract changed lines for PR (EXCLUDING DELETED FILES)
+      - name: Extract Changed Lines in PR (Exclude Deleted Files)
+        if: env.HAS_FILES == 'true'
+        run: |
+          PR_HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          echo "Extracting changed lines from PR (excluding deleted files)..."
+          mkdir -p results
+          > results/changed_lines_map.txt
+
+          current_file=""
+          while read -r line; do
+            if [[ "$line" == FILE:* ]]; then
+              current_file="${line#FILE:}"
+            elif [[ "$line" == LINE:* ]]; then
+              echo "$current_file:${line#LINE:}" >> results/changed_lines_map.txt
+            fi
+          done < <(
+            # Using MERGE_BASE_SHA for accurate comparison against current target branch
+            git diff --unified=0 -w --diff-filter=d "$MERGE_BASE_SHA" "$PR_HEAD_SHA" |
+            gawk '
+              /^diff --git/ {
+                file = $3
+                sub("^a/", "", file)
+                if (file ~ /\.(cls|trigger|js|html|css|xml)$/) {
+                  print "FILE:" file
+                } else {
+                  file = ""
+                }
+              }
+              /^@@/ && file != "" {
+                match($0, /\+([0-9]+)(,([0-9]+))?/, m)
+                start = m[1]
+                count = (m[3] ? m[3] : 1)
+                for (i = 0; i < count; i++) {
+                  print "LINE:" start + i
+                }
+              }
+            '
+          )
+
+          echo "Changed lines map:"
+          cat results/changed_lines_map.txt
+
+      - name: Filter Violations for Changed Lines Only
+        if: env.HAS_FILES == 'true'
+        run: |
+          echo "Filtering sfca_results.json for changed lines only..."
+          mkdir -p results
+
+          awk -F: '{print "{\"file\": \"" $1 "\", \"line\": " $2 "}"}' results/changed_lines_map.txt > results/changed_lines_temp.json
+          jq -s '.' results/changed_lines_temp.json > results/changed_lines.json
+
+          echo "Built changed lines JSON:"
+          cat results/changed_lines.json
+
+          echo "Building filtered JSON..."
+          jq --slurpfile changedLines results/changed_lines.json '
+            [ .violations[]
+              | select(
+                  .locations
+                  | any(
+                      . as $loc |
+                      $changedLines[0][] |
+                      (.file == $loc.file and .line == $loc.startLine)
+                    )
+                )
+            ]
+          ' sfca_results.json > results/line_level_violations.json
+
+          echo "Line-level filtered violations:"
+          cat results/line_level_violations.json
+
+      - name: Generate HTML Report for Line-Level Violations
+        if: env.HAS_FILES == 'true'
+        run: |
+          echo "Generating line-level HTML report..."
+          mkdir -p results
+
+          {
+            echo "<html><head><title>Line-Level Violations</title></head><body><h1>Line-Level Violations</h1><ul>"
+            jq -r '.[] | "<li><b>\(.ruleName)</b> in <code>\(.locations[0].file)</code> at line <code>\(.locations[0].startLine)</code>: \(.message)</li>"' results/line_level_violations.json
+            echo "</ul></body></html>"
+          } > results/line_level_violations.html
+
+      - name: Summarize Violations for Changed Lines Only (with Color-coded Severity)
+        if: env.HAS_FILES == 'true'
+        run: |
+          echo "### ⚠️ Salesforce Code Analyzer: SEV1 & SEV2 Violations for Changed Lines Only" >> $GITHUB_STEP_SUMMARY
+          echo "| Engine | Rule | File | Line | Severity | Message | Docs |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|------|------|------|----------|---------|------|" >> $GITHUB_STEP_SUMMARY
+
+          jq -r '
+            .[] | select(.severity == 1 or .severity == 2) |
+            .engine as $engine |
+            .rule as $rule |
+            .message as $msg |
+            .resources[0] as $doc |
+            .locations[0] as $loc |
+            (.severity // "" | tostring) as $sev |
+            (
+              $sev as $s |
+              if $s == "1" then "<span style=\"background-color:#d73a49;color:#fff;padding:2px 6px;border-radius:3px;\">SEV1</span>"
+              elif $s == "2" then "<span style=\"background-color:#ff8800;color:#fff;padding:2px 6px;border-radius:3px;\">SEV2</span>"
+              elif $s == "3" then "<span style=\"background-color:#ffd700;color:#000;padding:2px 6px;border-radius:3px;\">SEV3</span>"
+              elif $s == "4" then "<span style=\"background-color:#28a745;color:#fff;padding:2px 6px;border-radius:3px;\">SEV4</span>"
+              elif $s == "5" then "<span style=\"background-color:#007bff;color:#fff;padding:2px 6px;border-radius:3px;\">SEV5</span>"
+              else ($s // "") end
+            ) as $badge |
+            "| \($engine) | \($rule) | `\($loc.file)` | \($loc.startLine) | \($badge) | \($msg)` | \($doc // "") |"
+          ' results/line_level_violations.json >> $GITHUB_STEP_SUMMARY
+
+      - name: Generate Line-Level Violations Table Output
+        id: generate_line_level_table
+        if: env.HAS_FILES == 'true'
+        run: |
+          TABLE=$(jq -r '
+            .[] |
+            .engine as $engine |
+            .rule as $rule |
+            .message as $msg |
+            .resources[0] as $doc |
+            .locations[0] as $loc |
+            "| \($engine) | \($rule) | `\($loc.file)` | \($loc.startLine) | \($msg)` | \($doc // "") |"
+          ' results/line_level_violations.json)
+          echo "table<<EOF" >> $GITHUB_OUTPUT
+          echo "$TABLE" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Check for SEV1/SEV2 Line-Level Violations and Set Status
+        if: env.HAS_FILES == 'true'
+        id: check-violations
+        run: |
+          count=$(jq '[.[] | select(.severity == 1 or .severity == 2)] | length' results/line_level_violations.json)
+          if [ "$count" -gt 0 ]; then
+            echo "❌ There are SEV1 or SEV2 code analyzer violations on the committed code."
+            echo "VIOLATION_MSG=❌ There are SEV1 or SEV2 code analyzer violations on the committed code." >> $GITHUB_ENV
+            echo "VIOLATION_STATUS=fail" >> $GITHUB_ENV
+          else
+            echo "✅ No SEV1 or SEV2 code analyzer violations detected."
+            echo "VIOLATION_MSG=✅ No SEV1 or SEV2 code analyzer violations detected." >> $GITHUB_ENV
+            echo "VIOLATION_STATUS=pass" >> $GITHUB_ENV
+          fi
+
+      - name: Comment PR - No Files to Analyze
+        if: env.HAS_FILES == 'false'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: "ℹ️ **Salesforce Code Analyzer**: No files to analyze (PR contains only deletions or non-analyzable files).",
+            });
+
+      - name: Comment PR-level Analyzer Status
+        if: env.HAS_FILES == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const body = process.env.VIOLATION_MSG;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body,
+            });
+        env:
+          VIOLATION_MSG: ${{ env.VIOLATION_MSG }}
+
+      - name: Upload Line-level Violations
+        if: always() && env.HAS_FILES == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: line-level-pr-violations
+          path: results/line_level_violations.json
+
+      - name: Fail the workflow if violations exist
+        if: env.VIOLATION_STATUS == 'fail'
+        run: |
+          echo "❌ Failing workflow due to SEV1 or SEV2 code analyzer violations."
+          exit 1

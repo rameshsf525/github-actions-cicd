@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ExtlClntAppConfigurablePolicies xmlns="http://soap.sforce.com/2006/04/metadata">
+    <externalClientApplication>MyConnectedApp</externalClientApplication>
+    <isEnabled>false</isEnabled>
+    <isOauthPluginEnabled>false</isOauthPluginEnabled>
+    <label>MyConnectedApp_plcy</label>
+</ExtlClntAppConfigurablePolicies>

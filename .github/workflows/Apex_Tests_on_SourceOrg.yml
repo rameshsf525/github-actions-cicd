@@ -9,7 +9,9 @@ on:
       - preint/*
       - qa
       - sit
+      - rsit
       - uat
+      - ruat
 
 env:
   TEST_MINUTES_TIMEOUT: 5

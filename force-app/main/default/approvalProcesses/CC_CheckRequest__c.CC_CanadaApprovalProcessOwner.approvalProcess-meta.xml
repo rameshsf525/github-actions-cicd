@@ -1,0 +1,379 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ApprovalProcess xmlns="http://soap.sforce.com/2006/04/metadata">
+    <active>true</active>
+    <allowRecall>true</allowRecall>
+    <allowedSubmitters>
+        <submitter>CC_FinanceManagerCanada</submitter>
+        <type>roleSubordinates</type>
+    </allowedSubmitters>
+    <approvalPageFields>
+        <field>Name</field>
+        <field>CC_Case__c</field>
+    </approvalPageFields>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <type>userHierarchyField</type>
+            </approver>
+        </assignedApprover>
+        <description>Assign to supervisor</description>
+        <entryCriteria>
+            <formula>AND(CreatedBy.ManagerId &lt;&gt; CC_FCA_Finance__c &amp;&amp; CreatedBy.ManagerId &lt;&gt; CC_FCA_Finance__r.ManagerId ,
+OR(
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Specialist Junior&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 0
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+),
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Specialist Senior&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 500
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+),
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Supervisor Bi Lingual Agents - Canada&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 1500
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+),
+
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Top Care Specialist&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 500
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+),
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Arbitration Manager Canada&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 5000
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+),
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Top Care Manager - Canada&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 5000
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+),
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Arbitration Coordinator Canada&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 500
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+),
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Supervisor Level 4 - Canada&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 2500
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+),
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Operation Head&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 5000
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+),
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;FCA Manager&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 10000
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+)))</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 1</label>
+        <name>Step_1</name>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>NAFTA_ManagerOfManager__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <description>Assign to Manager of Manager</description>
+        <entryCriteria>
+            <formula>AND(CreatedBy.ManagerId &lt;&gt; CC_FCA_Finance__c &amp;&amp; CreatedBy.ManagerId &lt;&gt; CC_FCA_Finance__r.ManagerId ,
+OR(
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Specialist Junior&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 1500
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+),
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Specialist Senior&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 2500
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+),
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Supervisor Bi Lingual Agents - Canada&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 2500
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+),
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Supervisor Level 4 - Canada&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 5000
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+),
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Operation Head&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 10000
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+),
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Arbitration Manager Canada&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 10000
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+),
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Top Care Specialist&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 5000
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+),
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Top Care Manager - Canada&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 10000
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+),
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Arbitration Coordinator Canada&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 5000
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+)))</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 2</label>
+        <name>Step_2</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>NAFTA_ManagerOfManagerOfManager__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <description>Assign to Manager of Manager of Manager</description>
+        <entryCriteria>
+            <formula>AND(CreatedBy.ManagerId &lt;&gt; CC_FCA_Finance__c &amp;&amp; CreatedBy.ManagerId &lt;&gt; CC_FCA_Finance__r.ManagerId ,
+OR(
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Specialist Junior&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 2500
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+),
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Specialist Senior&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 5000
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+),
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Supervisor Bi Lingual Agents - Canada&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 5000
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+),
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Supervisor Level 4 - Canada&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 10000
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+),
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Top Care Specialist&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 10000
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+),
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Arbitration Coordinator Canada&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 10000
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+)
+))</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 3</label>
+        <name>Step_3</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>CC_ManagerLevel4__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <description>Assign to Manager Level 4</description>
+        <entryCriteria>
+            <formula>AND(CreatedBy.ManagerId &lt;&gt; CC_FCA_Finance__c &amp;&amp; CreatedBy.ManagerId &lt;&gt; CC_FCA_Finance__r.ManagerId ,
+OR(
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Specialist Junior&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 5000
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+),
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Specialist Senior&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 10000
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+),
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Supervisor Bi Lingual Agents - Canada&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 10000
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+)
+))</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 4</label>
+        <name>Step_4</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>CC_ManagerLevel5__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <description>Assign to Manager Level 5</description>
+        <entryCriteria>
+            <formula>AND(CreatedBy.ManagerId &lt;&gt; CC_FCA_Finance__c &amp;&amp; CreatedBy.ManagerId &lt;&gt; CC_FCA_Finance__r.ManagerId ,
+OR(
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Specialist Junior&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 10000
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+)
+))</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 5</label>
+        <name>Step_5</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>CC_FCA_Finance__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <description>Route to Finance</description>
+        <entryCriteria>
+            <formula>OR(
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Specialist Junior&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 5000
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+),
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Specialist Senior&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 5000
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+),
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Supervisor Bi Lingual Agents - Canada&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 5000
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+),
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Supervisor Level 4 - Canada&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 5000
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+),
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Operation Head&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 5000
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+),
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;FCA Manager&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 0
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+),
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Senior Manager&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 0
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+),
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Arbitration Manager Canada&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 5000
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+),
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Arbitration Coordinator Canada&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 5000
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+),
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Top Care Specialist&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 5000
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+),
+(CONTAINS(CreatedBy.UserRole.Name ,&apos;Top Care Manager - Canada&apos;)
+&amp;&amp; ISPICKVAL(CC_Status__c , &apos;Submitted&apos;)
+&amp;&amp; CC_TotalAmount__c &gt; 5000
+&amp;&amp; CC_TotalAmount__c &lt;= 999999
+)
+)</formula>
+        </entryCriteria>
+        <label>Final Approver</label>
+        <name>Final_Approver</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <description>Approval Process created for CC-544 for Canada. This is valid only for Check Requests created for Owner for some conditions are otherwise depending on other conditions.STRY0563466 story updations</description>
+    <enableMobileDeviceAccess>false</enableMobileDeviceAccess>
+    <entryCriteria>
+        <criteriaItems>
+            <field>CC_CheckRequest__c.NAFTA_CaseMarket__c</field>
+            <operation>equals</operation>
+            <value>Canada</value>
+        </criteriaItems>
+        <criteriaItems>
+            <field>CC_CheckRequest__c.CC_Status__c</field>
+            <operation>equals</operation>
+            <value>Submitted</value>
+        </criteriaItems>
+    </entryCriteria>
+    <finalApprovalActions>
+        <action>
+            <name>CC_CheckRequestStatusApproved</name>
+            <type>FieldUpdate</type>
+        </action>
+    </finalApprovalActions>
+    <finalApprovalRecordLock>false</finalApprovalRecordLock>
+    <finalRejectionActions>
+        <action>
+            <name>CC_CheckRequestStatusRejected</name>
+            <type>FieldUpdate</type>
+        </action>
+    </finalRejectionActions>
+    <finalRejectionRecordLock>false</finalRejectionRecordLock>
+    <label>Canada Approval Process Owner</label>
+    <nextAutomatedApprover>
+        <useApproverFieldOfRecordOwner>false</useApproverFieldOfRecordOwner>
+        <userHierarchyField>Manager</userHierarchyField>
+    </nextAutomatedApprover>
+    <processOrder>1</processOrder>
+    <recallActions>
+        <action>
+            <name>CC_CheckRequestRequestStatusRecalled</name>
+            <type>FieldUpdate</type>
+        </action>
+    </recallActions>
+    <recordEditability>AdminOrCurrentApprover</recordEditability>
+    <showApprovalHistory>false</showApprovalHistory>
+</ApprovalProcess>

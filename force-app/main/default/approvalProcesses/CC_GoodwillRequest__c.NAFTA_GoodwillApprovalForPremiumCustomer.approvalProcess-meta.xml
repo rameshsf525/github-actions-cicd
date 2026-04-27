@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ApprovalProcess xmlns="http://soap.sforce.com/2006/04/metadata">
+    <active>false</active>
+    <allowRecall>true</allowRecall>
+    <allowedSubmitters>
+        <submitter>CC_Reporting_Manager</submitter>
+        <type>roleSubordinatesInternal</type>
+    </allowedSubmitters>
+    <approvalPageFields>
+        <field>Name</field>
+        <field>CC_Case__c</field>
+        <field>CC_TotalGoodwillRequested__c</field>
+        <field>NAFTA_PremiumVehicleGoodwill__c</field>
+        <field>NAFTA_AlfaGoodwill__c</field>
+    </approvalPageFields>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <type>userHierarchyField</type>
+            </approver>
+        </assignedApprover>
+        <entryCriteria>
+            <formula>CONTAINS(CreatedBy.UserRole.DeveloperName,&quot;CC_Advisor_Level1_USA&quot;)
+&amp;&amp;  CC_TotalGoodwillRequested__c &gt; 0 &amp;&amp; 
+if(CC_PromoCode__c == CC_TotalGoodwillRequested__c,false ,true)</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 1</label>
+        <name>Step_1</name>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <type>userHierarchyField</type>
+            </approver>
+        </assignedApprover>
+        <entryCriteria>
+            <formula>CONTAINS( CreatedBy.UserRole.DeveloperName , &quot;CC_Specialist_USA&quot;) &amp;&amp;  CC_TotalGoodwillRequested__c &gt; 1500 &amp;&amp; 
+if(CC_PromoCode__c == CC_TotalGoodwillRequested__c,false ,true)</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 1</label>
+        <name>Step_2</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <type>userHierarchyField</type>
+            </approver>
+        </assignedApprover>
+        <entryCriteria>
+            <formula>OR
+(CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;NAFTA_SpecialistSeniorUSA&quot;) &amp;&amp; CC_TotalGoodwillRequested__c &gt; 2500,
+ CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;CC_Supervisor_Level1_USA&quot;) &amp;&amp; CC_TotalGoodwillRequested__c &gt; 3000,
+((CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;CC_Supervisor_Level2_USA&quot;)
+|| CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;CC_Supervisor_Level3_USA&quot;)
+|| CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;NAFTA_SupervisorLevel4USA&quot;)
+|| CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;NAFTA_SupervisorLevel6USA&quot;) ) &amp;&amp; CC_TotalGoodwillRequested__c &gt; 10000)
+)&amp;&amp;
+if(CC_PromoCode__c == CC_TotalGoodwillRequested__c,false ,true)</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 1</label>
+        <name>Step_3</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>CC_ManagerLevel2__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <entryCriteria>
+            <formula>OR
+(CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;CC_Advisor_Level1_USA&quot;) &amp;&amp; CC_TotalGoodwillRequested__c &gt; 3000,
+(CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;NAFTA_SpecialistSeniorUSA&quot;)
+|| CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;CC_Specialist_USA&quot;)) &amp;&amp; CC_TotalGoodwillRequested__c &gt; 10000) &amp;&amp;
+if(CC_PromoCode__c == CC_TotalGoodwillRequested__c,false ,true)</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 2</label>
+        <name>Step_4</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>CC_ManagerLevel2__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <entryCriteria>
+            <formula>( CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;CC_Level3_Agent_USA&quot;) 
+ ) &amp;&amp; CC_TotalGoodwillRequested__c &gt; 5000 &amp;&amp; 
+if(CC_PromoCode__c == CC_TotalGoodwillRequested__c,false ,true)</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 2</label>
+        <name>Step_5</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>CC_ManagerLevel2__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <entryCriteria>
+            <formula>CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;NAFTA_SocialMediaAgentJuniorUSA&quot;)  &amp;&amp; CC_TotalGoodwillRequested__c &gt; 1500 &amp;&amp; 
+if(CC_PromoCode__c == CC_TotalGoodwillRequested__c,false ,true)</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 2</label>
+        <name>Step_6</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>CC_ManagerLevel2__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <entryCriteria>
+            <formula>CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;NAFTA_SocialMediaAgentSeniorUSA&quot;) &amp;&amp; CC_TotalGoodwillRequested__c &gt; 2500 &amp;&amp; 
+if(CC_PromoCode__c == CC_TotalGoodwillRequested__c,false ,true)</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 2</label>
+        <name>Step_7</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>CC_ManagerLevel2__c</name>
+                <type>relatedUserField</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <entryCriteria>
+            <formula>CONTAINS(CreatedBy.UserRole.DeveloperName ,&quot;NAFTA_Special_Investigation_team&quot;) &amp;&amp; CC_TotalGoodwillRequested__c &gt; 5000 &amp;&amp; 
+if(CC_PromoCode__c == CC_TotalGoodwillRequested__c,false ,true)</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 2</label>
+        <name>Step_8</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <type>userHierarchyField</type>
+            </approver>
+        </assignedApprover>
+        <entryCriteria>
+            <formula>IF(CC_PromoCode__c==CC_TotalGoodwillRequested__c, true, false) &amp;&amp; CC_PromoCode__c &gt;= 50</formula>
+        </entryCriteria>
+        <ifCriteriaNotMet>GotoNextStep</ifCriteriaNotMet>
+        <label>Level 1</label>
+        <name>Step_9</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <approvalStep>
+        <allowDelegate>true</allowDelegate>
+        <assignedApprover>
+            <approver>
+                <name>NAFTA_BrandAdvocateGroup</name>
+                <type>queue</type>
+            </approver>
+            <whenMultipleApprovers>FirstResponse</whenMultipleApprovers>
+        </assignedApprover>
+        <entryCriteria>
+            <formula>IF(CC_PromoCode__c==CC_TotalGoodwillRequested__c, true, false) &amp;&amp; CC_PromoCode__c &lt; 50</formula>
+        </entryCriteria>
+        <label>Level 1</label>
+        <name>Step_10</name>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <description>CC-544. Approval process for premium as well as non-premium USA customers.</description>
+    <enableMobileDeviceAccess>false</enableMobileDeviceAccess>
+    <entryCriteria>
+        <criteriaItems>
+            <field>CC_GoodwillRequest__c.CC_GoodwillRequestStatus__c</field>
+            <operation>equals</operation>
+            <value>Draft</value>
+        </criteriaItems>
+        <criteriaItems>
+            <field>Case.CC_Market__c</field>
+            <operation>equals</operation>
+            <value>USA</value>
+        </criteriaItems>
+        <criteriaItems>
+            <field>CC_GoodwillRequest__c.CC_CreateCheckRequestChecked__c</field>
+            <operation>equals</operation>
+            <value>False</value>
+        </criteriaItems>
+        <criteriaItems>
+            <field>CC_GoodwillRequest__c.CC_Goodwill_Type__c</field>
+            <operation>notEqual</operation>
+            <value>Goodwill Check,Goodwill Rental</value>
+        </criteriaItems>
+    </entryCriteria>
+    <finalApprovalActions>
+        <action>
+            <name>CC_GoodwillApprovedChecked</name>
+            <type>FieldUpdate</type>
+        </action>
+    </finalApprovalActions>
+    <finalApprovalRecordLock>true</finalApprovalRecordLock>
+    <finalRejectionActions>
+        <action>
+            <name>CC_GoodwillRequestStatustoRejected</name>
+            <type>FieldUpdate</type>
+        </action>
+        <action>
+            <name>CC_RecordTypetoNAFTA</name>
+            <type>FieldUpdate</type>
+        </action>
+    </finalRejectionActions>
+    <finalRejectionRecordLock>false</finalRejectionRecordLock>
+    <initialSubmissionActions>
+        <action>
+            <name>CC_GoodwillRequestStatusSubmitted</name>
+            <type>FieldUpdate</type>
+        </action>
+        <action>
+            <name>CC_NAFTASubmitForApproval</name>
+            <type>FieldUpdate</type>
+        </action>
+        <action>
+            <name>CC_TotalGoodwillApprovedSpecialists</name>
+            <type>FieldUpdate</type>
+        </action>
+    </initialSubmissionActions>
+    <label>Goodwill Approval For Premium Customer</label>
+    <nextAutomatedApprover>
+        <useApproverFieldOfRecordOwner>false</useApproverFieldOfRecordOwner>
+        <userHierarchyField>Manager</userHierarchyField>
+    </nextAutomatedApprover>
+    <processOrder>2</processOrder>
+    <recallActions>
+        <action>
+            <name>CC_GoodwillRequestStatusRecalled</name>
+            <type>FieldUpdate</type>
+        </action>
+    </recallActions>
+    <recordEditability>AdminOrCurrentApprover</recordEditability>
+    <showApprovalHistory>true</showApprovalHistory>
+</ApprovalProcess>
