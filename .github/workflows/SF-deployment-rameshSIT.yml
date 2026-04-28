@@ -115,13 +115,19 @@ jobs:
         run: |
           npm install -g @salesforce/cli@latest
           sf --version
-
-      - name: Authorize SFDC org
+      - name: Login Saleforce
+        shell: pwsh
         run: |
-          ./scripts/Rauth.sh "${{ secrets.SALESFORCE_CLIENT_ID_art5poc }}" \
-            "${{ secrets.SALESFORCE_CLIENT_SECRET_art5poc }}" \
-            "${{ inputs.sf_target_org || 'art5poc' }}" \
-            "${{ secrets.SALESFORCE_CRED_art5poc }}"
+              add-content -path sfdxurl.txt -value "${{ secrets.RAMESH_SIT }}" -Force
+              sf org login sfdx-url -f sfdxurl.txt
+              remove-item sfdxurl.txt -force -recurse -verbose
+      
+      # - name: Authorize SFDC org
+        # run: |
+        #   ./scripts/Rauth.sh "${{ secrets.SALESFORCE_CLIENT_ID_art5poc }}" \
+        #     "${{ secrets.SALESFORCE_CLIENT_SECRET_art5poc }}" \
+        #     "${{ inputs.sf_target_org || 'art5poc' }}" \
+        #     "${{ secrets.SALESFORCE_CRED_art5poc }}"
 
       - name: Get deployment delta
         run: |
